@@ -76,8 +76,8 @@ research-tracker/
 
 1. 将代码推送到 GitHub
 2. 登录 [railway.app](https://railway.app)，新建项目并连接仓库
-3. **后端**：新建 Service，Root Directory 填 `backend`，Start Command 填 `uvicorn main:app --host 0.0.0.0 --port $PORT`，生成域名
-4. **前端**：新建 Service，Root Directory 填 `frontend`，在 Variables 中设置 `NEXT_PUBLIC_API_URL=https://你的后端域名`，生成域名
+3. **后端**：新建 Service，Root Directory 填 `research-tracker/backend`，生成域名（使用 Dockerfile 构建）
+4. **前端**：新建 Service，Root Directory 填 `research-tracker/frontend`，在 Variables 中设置 `NEXT_PUBLIC_API_URL=https://你的后端域名`，生成域名
 5. 访问前端域名即可使用
 
 ## 定时更新
