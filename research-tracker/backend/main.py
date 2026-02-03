@@ -27,6 +27,16 @@ def startup():
     init_db()
 
 
+@app.get("/")
+def root():
+    """Root route - redirect to docs."""
+    return {
+        "message": "方矩研报 API",
+        "docs": "/docs",
+        "health": "/api/health",
+    }
+
+
 def _normalize_date(value: str | None) -> str | None:
     if not value:
         return None
