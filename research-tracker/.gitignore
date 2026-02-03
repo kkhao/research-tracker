@@ -1,0 +1,6 @@
+backend/venv/
+backend/papers.db
+backend/.env
+frontend/node_modules/
+frontend/.next/
+.env.local
