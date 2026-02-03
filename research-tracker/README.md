@@ -74,11 +74,20 @@ research-tracker/
 
 ## Railway 部署（外网访问）
 
-1. 将代码推送到 GitHub
-2. 登录 [railway.app](https://railway.app)，新建项目并连接仓库
-3. **后端**：新建 Service，Root Directory 填 `research-tracker/backend`，生成域名（使用 Dockerfile 构建）
-4. **前端**：新建 Service，Root Directory 填 `research-tracker/frontend`，在 Variables 中设置 `NEXT_PUBLIC_API_URL=https://你的后端域名`，生成域名
-5. 访问前端域名即可使用
+### 方式一：单服务部署（仅后端）
+
+1. 登录 [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
+2. 选择 `kkhao/research-tracker` 仓库
+3. **不要设置** Root Directory，直接部署（仓库根目录有 Dockerfile，会自动构建后端）
+4. 部署完成后，在 Service 的 **Settings** → **Networking** → **Generate Domain** 生成公网域名
+5. 访问 `https://你的域名/docs` 可查看 API 文档
+
+### 方式二：前后端完整部署
+
+1. **后端**：新建 Service，连接同一仓库，Root Directory 留空（使用根目录 Dockerfile），生成域名
+2. **前端**：再新建一个 Service，连接同一仓库，Root Directory 填 `research-tracker/frontend`
+3. 在前端 Service 的 **Variables** 中添加：`NEXT_PUBLIC_API_URL=https://后端域名`
+4. 为前端生成域名，访问即可使用
 
 ## 定时更新
 
