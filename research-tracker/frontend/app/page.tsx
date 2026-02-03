@@ -125,7 +125,8 @@ export default function Home() {
         const data = await res.json();
         setPapers(data);
       } else {
-        setError(`请求失败: ${res.status}`);
+        const url = `${API_BASE}/api/papers`;
+        setError(`请求失败: ${res.status}。请检查 ${url} 是否可访问`);
       }
     } catch (e) {
       setError(`无法连接后端 (${API_BASE})，请检查 NEXT_PUBLIC_API_URL 是否配置正确`);
@@ -854,11 +855,18 @@ export default function Home() {
                 <div className="text-sm text-[var(--text-muted)]">加载中…</div>
               </div>
             ) : error ? (
-              <div className="text-center py-24 text-[var(--text-muted)]">
+              <div className="text-center py-24 text-[var(--text-muted)] max-w-md mx-auto">
                 <p className="mb-4 text-red-400">{error}</p>
-                <p className="text-sm mb-4">
-                  请先启动后端: <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">uvicorn main:app --reload --port 8000</code>
+                <p className="text-sm mb-4 text-left">
+                  {API_BASE.includes("localhost") ? (
+                    <>本地开发请先启动后端: <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">uvicorn main:app --reload --port 8000</code></>
+                  ) : (
+                    <>Railway 部署请确认前端 Variables 中 <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">NEXT_PUBLIC_API_URL</code> 为后端域名，修改后需 Redeploy</>
+                  )}
                 </p>
+                <a href={`${API_BASE}/api/health`} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--accent)] hover:underline block mb-4">
+                  测试后端健康检查 →
+                </a>
                 <button
                   onClick={() => { setLoading(true); fetchPapers(); }}
                   className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm hover:bg-[var(--accent-hover)]"
