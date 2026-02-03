@@ -128,7 +128,7 @@ export default function Home() {
         setError(`请求失败: ${res.status}`);
       }
     } catch (e) {
-      setError("无法连接后端，请确认已启动后端服务 (端口 8000)");
+      setError(`无法连接后端 (${API_BASE})，请检查 NEXT_PUBLIC_API_URL 是否配置正确`);
       setPapers([]);
     } finally {
       setLoading(false);
@@ -198,7 +198,7 @@ export default function Home() {
       return [];
     } catch {
       setPosts([]);
-      setPostsError("无法连接后端，请确认已启动后端服务");
+      setPostsError(`无法连接后端 (${API_BASE})`);
       return [];
     } finally {
       setPostsLoading(false);
@@ -228,7 +228,7 @@ export default function Home() {
       return [];
     } catch {
       setPosts([]);
-      setPostsError("无法连接后端，请确认已启动后端服务");
+      setPostsError(`无法连接后端 (${API_BASE})`);
       return [];
     } finally {
       setPostsLoading(false);
@@ -276,7 +276,7 @@ export default function Home() {
         setPostsError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);
       }
     } catch {
-      setPostsError("无法连接后端，请确认已启动后端服务");
+      setPostsError(`无法连接后端 (${API_BASE})`);
     } finally {
       setPostsRefreshing(false);
     }
@@ -299,7 +299,7 @@ export default function Home() {
         setPostsError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);
       }
     } catch {
-      setPostsError("无法连接后端，请确认已启动后端服务");
+      setPostsError(`无法连接后端 (${API_BASE})`);
     } finally {
       setPostsRefreshing(false);
     }
@@ -329,7 +329,7 @@ export default function Home() {
         if (e.name === "AbortError") {
           setError("抓取超时（超过 2 分钟）。arXiv 可能较慢，请检查网络或稍后重试");
         } else {
-          setError("无法连接后端，请确认后端已启动");
+          setError(`无法连接后端 (${API_BASE})`);
         }
       }
       setPapers([]);
