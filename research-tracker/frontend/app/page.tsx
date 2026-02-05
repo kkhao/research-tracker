@@ -813,6 +813,33 @@ export default function Home() {
             <div className="mt-4 space-y-5 p-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--card-shadow)]">
               <div>
                 <div className="text-sm font-medium text-[var(--text-muted)] mb-3">
+                  数据维护
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${API_BASE}/api/backfill-tags?force=true`, {
+                        method: "POST",
+                      });
+                      const data = await res.json();
+                      if (res.ok) {
+                        alert(`已补全 ${data.papers_updated} 篇论文的标签`);
+                        fetchPapers();
+                      }
+                    } catch (e) {
+                      alert("补全失败");
+                    }
+                  }}
+                  className={`${btnBase} ${btnSecondary}`}
+                >
+                  补全论文标签
+                </button>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
+                  若标签筛选无结果，可点击此按钮为已有论文补全标签
+                </p>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-[var(--text-muted)] mb-3">
                   高级筛选
                 </div>
                 <Filters filters={filters} onChange={setFilters} section="advanced" />

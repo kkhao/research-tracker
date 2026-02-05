@@ -505,3 +505,32 @@ def fetch_and_store(days: int = 7):
     conn.commit()
     conn.close()
     return inserted, notifications
+
+
+def backfill_paper_tags(force: bool = False) -> int:
+    """Backfill tags for papers. If force=False, only papers with NULL/empty tags. Returns count updated."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    if force:
+        cursor.execute("SELECT id, title, abstract, categories, keywords, source, venue FROM papers")
+    else:
+        cursor.execute(
+            "SELECT id, title, abstract, categories, keywords, source, venue FROM papers WHERE tags IS NULL OR tags = ''"
+        )
+    rows = cursor.fetchall()
+    updated = 0
+    for row in rows:
+        tags_list = tag_paper(
+            row["title"] or "",
+            row["abstract"] or "",
+            row["categories"] or "",
+            row["keywords"] or "",
+            row["source"] or "",
+            row["venue"] or "",
+        )
+        tags = tags_to_str(tags_list)
+        cursor.execute("UPDATE papers SET tags = ? WHERE id = ?", (tags, row["id"]))
+        updated += 1
+    conn.commit()
+    conn.close()
+    return updated

@@ -7,7 +7,7 @@ from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 from database import init_db, get_connection
-from crawler import fetch_and_store
+from crawler import fetch_and_store, backfill_paper_tags
 from community_crawler import fetch_and_store_posts
 from company_crawler import fetch_and_store_company_posts, COMPANY_DIRECTIONS, _strip_html as strip_html
 
@@ -25,6 +25,10 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
+    # Backfill tags for existing papers that have NULL/empty tags (enables tag filtering)
+    n = backfill_paper_tags()
+    if n > 0:
+        print(f"[startup] Backfilled tags for {n} papers")
 
 
 @app.get("/")
@@ -154,6 +158,13 @@ def refresh_papers(days: int = Query(7, ge=1, le=30)):
     """Trigger crawl to fetch new papers from arXiv."""
     count, notifications = fetch_and_store(days=days)
     return {"status": "ok", "papers_added": count, "notifications_added": notifications}
+
+
+@app.post("/api/backfill-tags")
+def backfill_tags(force: bool = Query(False, description="If true, re-tag all papers")):
+    """Manually backfill tags. Use if tag filter returns empty."""
+    n = backfill_paper_tags(force=force)
+    return {"status": "ok", "papers_updated": n}
 
 
 @app.get("/api/posts")
