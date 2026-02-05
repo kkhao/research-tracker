@@ -13,18 +13,18 @@ ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO", "cs.CL", "cs.AI", "cs.MM", "eess.IV"]
 
 OPENREVIEW_API = "https://api.openreview.net/notes"
-# 仅 2025 年及以后的会议
+OPENREVIEW_HEADERS = {"User-Agent": "ResearchTracker/1.0"}
+# (venue_id, display_name) - 使用 invitation 查询（content.venueid 实测返回空）
+# API v2 格式: {venue_id}/-/Submission; 部分旧会议用 Blind_Submission
+# ICLR/NeurIPS 可用 openreview-py 获取；CVF (CVPR/ICCV/ECCV) 在 OpenReview 上可能受限
 OPENREVIEW_VENUES = [
-    "CVPR 2026 Conference",
-    "ICCV 2025 Conference",
-    "ECCV 2026 Conference",
-    "ICLR 2026 Conference",
-    "NeurIPS 2026 Conference",
-    "SIGGRAPH 2026 Conference",
-    "CVPR 2025 Conference",
-    "ICLR 2025 Conference",
-    "NeurIPS 2025 Conference",
-    "SIGGRAPH 2025 Conference",
+    ("ICLR.cc/2024/Conference", "ICLR 2024 Conference"),
+    ("ICLR.cc/2025/Conference", "ICLR 2025 Conference"),
+    ("NeurIPS.cc/2024/Conference", "NeurIPS 2024 Conference"),
+    ("NeurIPS.cc/2025/Conference", "NeurIPS 2025 Conference"),
+    ("thecvf.com/CVPR/2024/Conference", "CVPR 2024 Conference"),
+    ("thecvf.com/CVPR/2025/Conference", "CVPR 2025 Conference"),
+    ("thecvf.com/ICCV/2025/Conference", "ICCV 2025 Conference"),
 ]
 
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
@@ -130,73 +130,168 @@ def fetch_recent_papers(days: int = 7, max_results: int = 150) -> list[dict]:
     return papers[:max_results]
 
 
-def fetch_openreview_papers(days: int = 7, max_results: int = 150) -> list[dict]:
-    """Fetch recent papers from OpenReview API."""
+def _openreview_val(v):
+    """Extract value from OpenReview content field (may be dict with 'value' key)."""
+    return v.get("value", v) if isinstance(v, dict) else (v or "")
+
+
+def _fetch_openreview_via_client(venue_id: str, venue_name: str, cutoff_ms: int, seen_ids: set, max_results: int) -> list[dict]:
+    """Use openreview-py client (supports API v2 venues)."""
+    try:
+        import openreview
+    except ImportError:
+        return []
+    if max_results <= 0:
+        return []
     papers = []
-    seen_ids = set()
-    cutoff_ms = int(datetime(2025, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
-
-    for venue in OPENREVIEW_VENUES:
-        offset = 0
-        while len(papers) < max_results:
-            params = {
-                "content.venue": venue,
-                "limit": 100,
-                "offset": offset,
-                "sort": "cdate:desc",
-            }
-            try:
-                r = requests.get(OPENREVIEW_API, params=params, timeout=30)
-                r.raise_for_status()
-                data = r.json()
-            except Exception:
-                break
-
-            notes = data.get("notes", [])
-            if not notes:
-                break
-
-            for note in notes:
-                note_id = note.get("id")
+    for inv_suffix in ["Submission", "Blind_Submission"]:
+        try:
+            client = openreview.api.OpenReviewClient(baseurl="https://api2.openreview.net")
+            invitation = f"{venue_id}/-/{inv_suffix}"
+            notes_iter = client.get_all_notes(invitation=invitation)
+            iter_count = 0
+            for note in notes_iter:
+                iter_count += 1
+                if iter_count > 2000:  # 避免遍历过多
+                    break
+                try:
+                    note_id = note.id if hasattr(note, "id") else note.get("id")
+                except (KeyError, AttributeError, TypeError):
+                    continue
                 if not note_id or note_id in seen_ids:
                     continue
-                cdate = note.get("cdate") or 0
-                pdate = note.get("pdate") or cdate
-                if pdate and pdate < cutoff_ms:
-                    continue
-                content = note.get("content") or {}
-                title = content.get("title") or ""
-                abstract = content.get("abstract") or ""
-                authors = content.get("authors") or []
-                authors_str = ", ".join(a for a in authors if isinstance(a, str))
-                doi = content.get("doi")
-                forum_url = f"https://openreview.net/forum?id={note_id}"
-                pdf_url = f"https://openreview.net/pdf?id={note_id}"
-                published_at = datetime.fromtimestamp(pdate / 1000, tz=timezone.utc).isoformat()
+                try:
+                    pdate = getattr(note, "pdate", None) or getattr(note, "cdate", 0)
+                    if isinstance(note, dict):
+                        pdate = note.get("pdate") or note.get("cdate", 0)
+                    if pdate and pdate < cutoff_ms:
+                        continue
+                    content = (note.get("content", {}) if isinstance(note, dict) else getattr(note, "content", None)) or {}
 
-                papers.append({
-                    "id": f"openreview:{note_id}",
-                    "title": title.replace("\n", " "),
-                    "abstract": abstract.replace("\n", " "),
-                    "authors": authors_str,
-                    "categories": venue,
-                    "pdf_url": pdf_url,
-                    "arxiv_url": forum_url,
-                    "published_at": published_at,
-                    "source": "openreview",
-                    "doi": doi,
-                    "url": forum_url,
-                    "affiliations": "",
-                    "keywords": "",
-                    "updated_at": None,
-                })
-                seen_ids.add(note_id)
-                if len(papers) >= max_results:
+                    title = _openreview_val(content.get("title") or "")
+                    abstract = _openreview_val(content.get("abstract") or "")
+                    authors_raw = content.get("authors")
+                    authors = []
+                    if isinstance(authors_raw, list):
+                        for a in authors_raw:
+                            authors.append(_openreview_val(a) if isinstance(a, dict) else str(a))
+                    elif authors_raw is not None:
+                        authors = [str(authors_raw)]
+                    authors_str = ", ".join(a for a in authors if isinstance(a, str))
+                    forum_url = f"https://openreview.net/forum?id={note_id}"
+                    published_at = datetime.fromtimestamp((pdate or 0) / 1000, tz=timezone.utc).isoformat()
+                    papers.append({
+                        "id": f"openreview:{note_id}",
+                        "title": title.replace("\n", " "),
+                        "abstract": abstract.replace("\n", " "),
+                        "authors": authors_str,
+                        "categories": venue_name,
+                        "pdf_url": f"https://openreview.net/pdf?id={note_id}",
+                        "arxiv_url": forum_url,
+                        "published_at": published_at,
+                        "source": "openreview",
+                        "doi": _openreview_val(content.get("doi")) if content.get("doi") else None,
+                        "url": forum_url,
+                        "affiliations": "",
+                        "keywords": "",
+                        "updated_at": None,
+                    })
+                    seen_ids.add(note_id)
+                    if len(papers) >= max_results:
+                        return papers
+                except (KeyError, TypeError, AttributeError):
+                    continue
+            if papers:
+                return papers
+        except Exception:
+            continue
+    return papers
+
+
+def fetch_openreview_papers(days: int = 7, max_results: int = 150) -> list[dict]:
+    """Fetch recent papers from OpenReview API. Uses openreview-py when available, else REST."""
+    papers = []
+    seen_ids = set()
+    cutoff_ms = int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
+
+    for venue_id, venue_name in OPENREVIEW_VENUES:
+        # 优先用 openreview-py 客户端（支持 API v2）
+        client_papers = _fetch_openreview_via_client(
+            venue_id, venue_name, cutoff_ms, seen_ids, max_results - len(papers)
+        )
+        if client_papers:
+            papers.extend(client_papers)
+            continue
+
+        # 回退到 REST API（api.openreview.net 对部分旧会议有效）
+        for inv_suffix in ["Submission", "Blind_Submission"]:
+            invitation = f"{venue_id}/-/{inv_suffix}"
+            offset = 0
+            got_any = False
+            while len(papers) < max_results:
+                params = {
+                    "invitation": invitation,
+                    "limit": 100,
+                    "offset": offset,
+                    "sort": "cdate:desc",
+                }
+                try:
+                    r = requests.get(
+                        OPENREVIEW_API, params=params, headers=OPENREVIEW_HEADERS, timeout=30
+                    )
+                    r.raise_for_status()
+                    data = r.json()
+                except Exception:
                     break
 
-            offset += len(notes)
-            if len(notes) < 100:
-                break
+                notes = data.get("notes", [])
+                if not notes:
+                    break
+                got_any = True
+
+                for note in notes:
+                    note_id = note.get("id")
+                    if not note_id or note_id in seen_ids:
+                        continue
+                    cdate = note.get("cdate") or 0
+                    pdate = note.get("pdate") or cdate
+                    if pdate and pdate < cutoff_ms:
+                        continue
+                    content = note.get("content") or {}
+                    title = content.get("title") or ""
+                    abstract = content.get("abstract") or ""
+                    authors = content.get("authors") or []
+                    authors_str = ", ".join(a for a in authors if isinstance(a, str))
+                    doi = content.get("doi")
+                    forum_url = f"https://openreview.net/forum?id={note_id}"
+                    pdf_url = f"https://openreview.net/pdf?id={note_id}"
+                    published_at = datetime.fromtimestamp(pdate / 1000, tz=timezone.utc).isoformat()
+
+                    papers.append({
+                        "id": f"openreview:{note_id}",
+                        "title": title.replace("\n", " "),
+                        "abstract": abstract.replace("\n", " "),
+                        "authors": authors_str,
+                        "categories": venue_name,
+                        "pdf_url": pdf_url,
+                        "arxiv_url": forum_url,
+                        "published_at": published_at,
+                        "source": "openreview",
+                        "doi": doi,
+                        "url": forum_url,
+                        "affiliations": "",
+                        "keywords": "",
+                        "updated_at": None,
+                    })
+                    seen_ids.add(note_id)
+                    if len(papers) >= max_results:
+                        break
+
+                offset += len(notes)
+                if len(notes) < 100:
+                    break
+            if got_any:
+                break  # 该 invitation 有效，已处理完，进入下一 venue
 
     papers.sort(key=lambda x: x["published_at"] or "", reverse=True)
     return papers[:max_results]

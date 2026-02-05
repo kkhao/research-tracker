@@ -152,6 +152,8 @@ def tag_company_post(
             break
     if channel and channel not in tags:
         tags.append(channel)
+    if author and "微信公众号" in str(author):
+        tags.append("微信公众号")
     return list(dict.fromkeys(tags))
 
 

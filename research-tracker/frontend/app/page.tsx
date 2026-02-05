@@ -699,6 +699,7 @@ export default function Home() {
                   className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                 >
                   <option value="">全部标签</option>
+                  <option value="微信公众号">微信公众号</option>
                   <option value="3DGS">3DGS</option>
                   <option value="4DGS">4DGS</option>
                   <option value="NeRF">NeRF</option>

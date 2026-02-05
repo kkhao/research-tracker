@@ -37,6 +37,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 const TAG_CLASSES: Record<string, string> = {
+  "微信公众号": "tag-wechat",
   "3DGS": "tag-3dgs",
   "NeRF": "tag-nerf",
   "世界模型": "tag-world",
