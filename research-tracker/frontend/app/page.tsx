@@ -314,7 +314,11 @@ export default function Home() {
       if (res.ok && data.status === "ok") {
         const fetched = await fetchCompanyPosts();
         if (data.posts_added === 0 && fetched.length === 0) {
-          setPostsError("抓取完成但未获取到内容。Google News 可能无法访问，请检查网络或代理");
+          const errList = data.errors as string[] | undefined;
+          const hint = errList?.length
+            ? `抓取失败: ${errList.slice(0, 3).join("; ")}${errList.length > 3 ? "…" : ""}。Google News 在中国大陆需代理，可设置 HTTPS_PROXY 或部署到海外`
+            : "抓取完成但未获取到内容。Google News 可能无法访问，请检查网络或代理，或设置 HTTPS_PROXY";
+          setPostsError(hint);
         }
       } else {
         setPostsError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);
@@ -578,13 +582,21 @@ export default function Home() {
                   className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                 >
                   <option value="">全部领域</option>
-                  <option value="3D Gaussian Splatting">3DGS</option>
-                  <option value="world model">世界模型</option>
-                  <option value="gaussian splatting">3D高斯</option>
-                  <option value="physics simulation">物理仿真</option>
-                  <option value="embodied">具身智能</option>
-                  <option value="3D reconstruction">3D重建</option>
-                  <option value="scene understanding">场景理解</option>
+                  <option value="3DGS">3DGS</option>
+                  <option value="4DGS">4DGS</option>
+                  <option value="NeRF">NeRF</option>
+                  <option value="世界模型">世界模型</option>
+                  <option value="视频生成">视频生成</option>
+                  <option value="物理仿真">物理仿真</option>
+                  <option value="具身智能">具身智能</option>
+                  <option value="大模型">大模型</option>
+                  <option value="扩散模型">扩散模型</option>
+                  <option value="3D生成">3D生成</option>
+                  <option value="VR/AR">VR/AR</option>
+                  <option value="可重光照">可重光照</option>
+                  <option value="逆渲染">逆渲染</option>
+                  <option value="人体/角色">人体/角色</option>
+                  <option value="3DGS编辑">3DGS编辑</option>
                 </select>
                 <select
                   value={postFilters.tag}
@@ -598,9 +610,12 @@ export default function Home() {
                   <option value="4DGS">4DGS</option>
                   <option value="NeRF">NeRF</option>
                   <option value="世界模型">世界模型</option>
+                  <option value="视频生成">视频生成</option>
+                  <option value="物理仿真">物理仿真</option>
+                  <option value="具身智能">具身智能</option>
                   <option value="大模型">大模型</option>
                   <option value="扩散模型">扩散模型</option>
-                  <option value="具身智能">具身智能</option>
+                  <option value="3D生成">3D生成</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照">可重光照</option>
                   <option value="逆渲染">逆渲染</option>
@@ -684,12 +699,18 @@ export default function Home() {
                   className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                 >
                   <option value="">全部标签</option>
+                  <option value="3DGS">3DGS</option>
+                  <option value="4DGS">4DGS</option>
+                  <option value="NeRF">NeRF</option>
+                  <option value="世界模型">世界模型</option>
+                  <option value="视频生成">视频生成</option>
+                  <option value="物理仿真">物理仿真</option>
+                  <option value="具身智能">具身智能</option>
+                  <option value="大模型">大模型</option>
+                  <option value="扩散模型">扩散模型</option>
                   <option value="3D生成">3D生成</option>
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3D设计">3D设计</option>
-                  <option value="大模型">大模型</option>
-                  <option value="扩散模型">扩散模型</option>
-                  <option value="具身智能">具身智能</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照">可重光照</option>
                   <option value="逆渲染">逆渲染</option>

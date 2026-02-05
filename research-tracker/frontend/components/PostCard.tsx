@@ -78,7 +78,9 @@ export default function PostCard({ post }: { post: Post }) {
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {post.source !== "company" && (
             <span className="px-2 py-0.5 rounded bg-[var(--tag-bg)] border border-[var(--border)]">
-              {sourceLabel}
+              {post.source === "github" && post.score > 0
+                ? `${sourceLabel} ★${post.score >= 1000 ? (post.score / 1000).toFixed(1) + "k" : post.score}`
+                : sourceLabel}
             </span>
           )}
           {post.channel && (

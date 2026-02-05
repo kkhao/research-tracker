@@ -45,6 +45,19 @@ POST_TAG_KEYWORDS: dict[str, list[str]] = {
     "3DGS编辑": ["gaussian splatting edit", "3dgs edit"],
 }
 
+# 会议标签：仅在 categories/venue 中匹配（避免 abstract 中提及会议误标）
+CONFERENCE_TAG_KEYWORDS: dict[str, list[str]] = {
+    "CVPR": ["cvpr"],
+    "ICCV": ["iccv"],
+    "ECCV": ["eccv"],
+    "ICLR": ["iclr"],
+    "NeurIPS": ["neurips", "nips"],
+    "SIGGRAPH": ["siggraph"],
+}
+
+# 业务标签集合（用于过滤：无业务标签的论文不入库）
+BUSINESS_TAGS = frozenset(PAPER_TAG_KEYWORDS.keys()) | frozenset(CONFERENCE_TAG_KEYWORDS.keys())
+
 # 公司方向 -> 展示标签
 COMPANY_DIRECTION_LABELS: dict[str, str] = {
     "3d_gen": "3D生成",
@@ -75,11 +88,19 @@ def tag_paper(
     categories: str,
     keywords: str,
     source: str,
+    venue: str = "",
 ) -> list[str]:
-    """Compute tags for a paper from title, abstract, categories, keywords."""
+    """Compute tags for a paper from title, abstract, categories, keywords, venue."""
     tags = []
     combined = f"{title or ''} {abstract or ''} {categories or ''} {keywords or ''}"
     tags.extend(_match_keywords(combined, PAPER_TAG_KEYWORDS))
+    # 会议标签：仅在 categories/venue 中匹配
+    cats_venue = f"{categories or ''} {venue or ''}".lower()
+    for conf, kws in CONFERENCE_TAG_KEYWORDS.items():
+        for kw in kws:
+            if kw in cats_venue:
+                tags.append(conf)
+                break
     if source:
         tags.append(source.upper())
     return list(dict.fromkeys(tags))

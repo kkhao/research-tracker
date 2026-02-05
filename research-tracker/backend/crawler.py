@@ -6,7 +6,7 @@ import sqlite3
 import requests
 
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_paper, tags_to_str
+from tagging import tag_paper, tags_to_str, BUSINESS_TAGS
 
 ARXIV_API = "http://export.arxiv.org/api/query"
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
@@ -372,13 +372,17 @@ def fetch_and_store(days: int = 7):
                 if dup is not None:
                     is_new = False
                     continue
-            tags = tags_to_str(tag_paper(
+            tags_list = tag_paper(
                 p.get("title", ""),
                 p.get("abstract", ""),
                 p.get("categories", ""),
                 p.get("keywords", ""),
                 p.get("source", ""),
-            ))
+                p.get("venue", ""),
+            )
+            if not any(t in BUSINESS_TAGS for t in tags_list):
+                continue
+            tags = tags_to_str(tags_list)
             cursor.execute("""
                 INSERT OR REPLACE INTO papers
                 (id, title, abstract, authors, categories, pdf_url, arxiv_url, published_at, source, doi, url, affiliations, keywords, venue, citation_count, tags, updated_at)

@@ -112,7 +112,7 @@ def _fetch_github(query: str, max_results: int = 15) -> list[dict]:
     try:
         r = requests.get(
             GITHUB_API,
-            params={"q": query, "sort": "updated", "per_page": max_results},
+            params={"q": query, "sort": "created", "per_page": max_results},
             headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "ResearchTracker"},
             timeout=15,
         )
@@ -132,7 +132,7 @@ def _fetch_github(query: str, max_results: int = 15) -> list[dict]:
                 "comment_count": 0,
                 "summary": (item.get("description") or "")[:500],
                 "channel": "",
-                "created_at": item.get("updated_at"),
+                "created_at": item.get("created_at"),
             })
     except Exception as e:
         print(f"GitHub fetch error: {e}")

@@ -248,8 +248,8 @@ def refresh_posts(days: int = Query(7, ge=1, le=30)):
 @app.post("/api/refresh-company-posts")
 def refresh_company_posts():
     """Trigger crawl to fetch company product updates."""
-    count = fetch_and_store_company_posts()
-    return {"status": "ok", "posts_added": count}
+    count, errors = fetch_and_store_company_posts()
+    return {"status": "ok", "posts_added": count, "errors": errors}
 
 
 @app.get("/api/tags")

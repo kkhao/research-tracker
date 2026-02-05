@@ -3,10 +3,16 @@ import os
 import re
 import urllib.parse
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import html
 import feedparser
 import requests
 from datetime import datetime, timezone
+
+# 每家公司抓取条数（减少请求量）
+COMPANY_MAX_RESULTS = int(os.getenv("COMPANY_FETCH_MAX_RESULTS", "3"))
+# 并行抓取线程数
+COMPANY_FETCH_WORKERS = int(os.getenv("COMPANY_FETCH_WORKERS", "6"))
 
 
 def _strip_html(text: str) -> str:
@@ -71,24 +77,15 @@ WECHAT_MP_ALBUMS: dict[str, tuple[str, str]] = {
 RSSHUB_BASE = os.getenv("RSSHUB_BASE_URL", "https://rsshub.app")
 
 
-def _resolve_google_news_url(url: str) -> str:
-    """Resolve Google News redirect URL to actual article URL."""
-    if not url or "news.google.com/rss/articles" not in url:
-        return url
-    try:
-        r = requests.head(
-            url,
-            allow_redirects=True,
-            timeout=5,
-            headers={"User-Agent": "ResearchTracker/1.0"},
-        )
-        return r.url if r.url and "news.google.com" not in r.url else url
-    except Exception:
-        return url
+def _get_requests_session():
+    """Session that respects HTTP_PROXY/HTTPS_PROXY for Google News access."""
+    s = requests.Session()
+    s.headers.update({"User-Agent": "ResearchTracker/1.0"})
+    return s
 
 
-def _fetch_company_news(company: str, max_results: int = 10) -> list[dict]:
-    """Fetch company news from Google News RSS."""
+def _fetch_company_news(company: str, max_results: int = 10) -> tuple[list[dict], str | None]:
+    """Fetch company news from Google News RSS. Returns (posts, error_msg)."""
     posts = []
     query = COMPANY_QUERIES.get(company, company)
     try:
@@ -96,11 +93,12 @@ def _fetch_company_news(company: str, max_results: int = 10) -> list[dict]:
         url = f"{GOOGLE_NEWS_RSS}?q={q_enc}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
         if not any(ord(c) > 127 for c in query):
             url = f"{GOOGLE_NEWS_RSS}?q={q_enc}&hl=en&gl=US&ceid=US:en"
-        feed = feedparser.parse(url, agent="ResearchTracker/1.0")
+        session = _get_requests_session()
+        r = session.get(url, timeout=15)
+        r.raise_for_status()
+        feed = feedparser.parse(r.content)
         for i, entry in enumerate(feed.get("entries", [])[:max_results]):
             link = entry.get("link") or ""
-            if link:
-                link = _resolve_google_news_url(link)
             title = _strip_html(entry.get("title") or "") or "(no title)"
             published = entry.get("published_parsed")
             created_at = None
@@ -123,9 +121,10 @@ def _fetch_company_news(company: str, max_results: int = 10) -> list[dict]:
                 "channel": company,
                 "created_at": created_at,
             })
+        return (posts, None)
     except Exception as e:
-        print(f"Company {company} fetch error: {e}")
-    return posts
+        err = f"{company}: {e}"
+        return (posts, err)
 
 
 def _fetch_wechat_news(company: str, max_results: int = 5) -> list[dict]:
@@ -185,10 +184,11 @@ def _normalize_url(url: str) -> str:
         return url
 
 
-def fetch_and_store_company_posts() -> int:
-    """Fetch company news and store in DB."""
+def fetch_and_store_company_posts() -> tuple[int, list[str]]:
+    """Fetch company news and store in DB. Returns (inserted_count, errors)."""
     init_db()
     all_posts = []
+    errors: list[str] = []
     seen_ids = set()
     seen_urls = set()
     companies = set()
@@ -206,16 +206,34 @@ def fetch_and_store_company_posts() -> int:
             seen_urls.add(norm_url)
         all_posts.append(p)
 
+    def _fetch_one(company: str):
+        posts, err = _fetch_company_news(company, max_results=COMPANY_MAX_RESULTS)
+        return (company, posts, err)
+
+    with ThreadPoolExecutor(max_workers=COMPANY_FETCH_WORKERS) as ex:
+        futures = {ex.submit(_fetch_one, c): c for c in companies}
+        for fut in as_completed(futures):
+            company, posts, err = fut.result()
+            if err:
+                errors.append(err)
+            for p in posts:
+                _add_post(p)
+
     for company in companies:
-        for p in _fetch_company_news(company, max_results=5):
-            _add_post(p)
-        for p in _fetch_wechat_news(company, max_results=5):
+        for p in _fetch_wechat_news(company, max_results=3):
             _add_post(p)
 
     # 自定义关键词：作为额外 Google News 搜索
-    for kw in load_crawl_keywords("company"):
-        for p in _fetch_company_news(kw, max_results=5):
-            _add_post(p)
+    extra_kws = load_crawl_keywords("company")
+    if extra_kws:
+        with ThreadPoolExecutor(max_workers=COMPANY_FETCH_WORKERS) as ex:
+            futures = {ex.submit(_fetch_one, kw): kw for kw in extra_kws}
+            for fut in as_completed(futures):
+                kw, posts, err = fut.result()
+                if err:
+                    errors.append(err)
+                for p in posts:
+                    _add_post(p)
     conn = get_connection()
     cursor = conn.cursor()
     inserted = 0
@@ -239,7 +257,7 @@ def fetch_and_store_company_posts() -> int:
             ))
             inserted += 1
         except Exception as e:
-            print(f"Error inserting company post {p['id']}: {e}")
+            errors.append(f"DB insert {p.get('id', '')}: {e}")
     conn.commit()
     conn.close()
-    return inserted
+    return (inserted, errors)
