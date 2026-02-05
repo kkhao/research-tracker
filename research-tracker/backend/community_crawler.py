@@ -1,5 +1,6 @@
 """Community crawler: Hacker News, Reddit, GitHub, YouTube, Hugging Face."""
 import os
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from datetime import datetime, timedelta
 from database import get_connection, init_db
@@ -211,43 +212,65 @@ def _fetch_huggingface(query: str, max_results: int = 15) -> list[dict]:
     return posts
 
 
+def _normalize_url(url: str) -> str:
+    """Normalize URL for deduplication: strip tracking params, fragment, trailing slash."""
+    if not url or not url.strip():
+        return ""
+    try:
+        parsed = urlparse(url.strip())
+        if not parsed.netloc:
+            return ""
+        # Remove fragment
+        # Filter out common tracking params (utm_*, fbclid, etc.)
+        query_params = parse_qs(parsed.query, keep_blank_values=False)
+        filtered = {k: v for k, v in query_params.items()
+                    if not (k.startswith("utm_") or k in ("fbclid", "gclid", "ref"))}
+        new_query = urlencode(filtered, doseq=True)
+        path = parsed.path.rstrip("/") or "/"
+        return urlunparse((parsed.scheme.lower(), parsed.netloc.lower(), path, "", new_query, ""))
+    except Exception:
+        return url
+
+
 def fetch_and_store_posts(days: int = 7) -> int:
     """Fetch community posts and store in DB."""
     init_db()
     all_posts = []
     seen_ids = set()
+    seen_urls = set()
+
+    def _add_post(p):
+        if p["id"] in seen_ids:
+            return
+        norm_url = _normalize_url(p.get("url") or "")
+        if norm_url and norm_url in seen_urls:
+            return
+        seen_ids.add(p["id"])
+        if norm_url:
+            seen_urls.add(norm_url)
+        all_posts.append(p)
 
     # 使用更通用的关键词以提高命中率
     hn_queries = ["3D Gaussian Splatting", "world model", "machine learning"]
     for kw in hn_queries[:3]:
         for p in _fetch_hn(kw, max_results=10):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
 
     for sub in REDDIT_SUBS:
         for p in _fetch_reddit(sub, limit=15):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
 
     for kw in ["3d gaussian splatting", "world model", "gaussian splatting"]:
         for p in _fetch_github(kw, max_results=10):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
 
     for kw in ["3D Gaussian Splatting", "world model", "gaussian splatting"]:
         for p in _fetch_youtube(kw, max_results=10):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
 
     for kw in ["3d gaussian splatting", "world model", "gaussian splatting"]:
         for p in _fetch_huggingface(kw, max_results=10):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
 
     conn = get_connection()
     cursor = conn.cursor()

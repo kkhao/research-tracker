@@ -2,6 +2,7 @@
 import os
 import re
 import urllib.parse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import html
 import feedparser
 import requests
@@ -166,23 +167,50 @@ def _fetch_wechat_news(company: str, max_results: int = 5) -> list[dict]:
     return posts
 
 
+def _normalize_url(url: str) -> str:
+    """Normalize URL for deduplication: strip tracking params, fragment, trailing slash."""
+    if not url or not url.strip():
+        return ""
+    try:
+        parsed = urlparse(url.strip())
+        if not parsed.netloc:
+            return ""
+        query_params = parse_qs(parsed.query, keep_blank_values=False)
+        filtered = {k: v for k, v in query_params.items()
+                    if not (k.startswith("utm_") or k in ("fbclid", "gclid", "ref"))}
+        new_query = urlencode(filtered, doseq=True)
+        path = parsed.path.rstrip("/") or "/"
+        return urlunparse((parsed.scheme.lower(), parsed.netloc.lower(), path, "", new_query, ""))
+    except Exception:
+        return url
+
+
 def fetch_and_store_company_posts() -> int:
     """Fetch company news and store in DB."""
     init_db()
     all_posts = []
     seen_ids = set()
+    seen_urls = set()
     companies = set()
     for _dir, comps in COMPANY_DIRECTIONS.items():
         companies.update(comps)
+
+    def _add_post(p):
+        if p["id"] in seen_ids:
+            return
+        norm_url = _normalize_url(p.get("url") or "")
+        if norm_url and norm_url in seen_urls:
+            return
+        seen_ids.add(p["id"])
+        if norm_url:
+            seen_urls.add(norm_url)
+        all_posts.append(p)
+
     for company in companies:
         for p in _fetch_company_news(company, max_results=5):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
         for p in _fetch_wechat_news(company, max_results=5):
-            if p["id"] not in seen_ids:
-                seen_ids.add(p["id"])
-                all_posts.append(p)
+            _add_post(p)
     conn = get_connection()
     cursor = conn.cursor()
     inserted = 0
