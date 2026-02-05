@@ -3,7 +3,7 @@ import os
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from datetime import datetime, timedelta
-from database import get_connection, init_db
+from database import get_connection, init_db, load_crawl_keywords
 from tagging import tag_post, tags_to_str
 
 HN_API = "https://hn.algolia.com/api/v1/search"
@@ -12,12 +12,23 @@ GITHUB_API = "https://api.github.com/search/repositories"
 YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
 HF_API = "https://huggingface.co/api/models"
 
+# 统一抓取关键词（HN/GitHub/YouTube/HuggingFace 共用）
 COMMUNITY_KEYWORDS = [
-    "3D Gaussian Splatting",
-    "3DGS",
-    "world model",
-    "NeRF",
     "Gaussian Splatting",
+    "3DGS",
+    "4DGS",
+    "world model",
+    "physics simulation",
+    "MPM",
+    "diffusion 3D",
+    "VR AR",
+    "relighting",
+    "inverse rendering",
+    "3D reconstruction",
+    "3D generation",
+    "human avatar",
+    "character animation",
+    "Gaussian splatting editing",
 ]
 
 REDDIT_SUBS = ["MachineLearning", "computervision", "LocalLLaMA"]
@@ -250,26 +261,28 @@ def fetch_and_store_posts(days: int = 7) -> int:
             seen_urls.add(norm_url)
         all_posts.append(p)
 
-    # 使用更通用的关键词以提高命中率
-    hn_queries = ["3D Gaussian Splatting", "world model", "machine learning"]
-    for kw in hn_queries[:3]:
-        for p in _fetch_hn(kw, max_results=10):
+    keywords = load_crawl_keywords("community")
+    if not keywords:
+        keywords = COMMUNITY_KEYWORDS
+    # 使用关键词统一抓取
+    for kw in keywords[:8]:  # HN 限制数量避免请求过多
+        for p in _fetch_hn(kw, max_results=8):
             _add_post(p)
 
     for sub in REDDIT_SUBS:
         for p in _fetch_reddit(sub, limit=15):
             _add_post(p)
 
-    for kw in ["3d gaussian splatting", "world model", "gaussian splatting"]:
-        for p in _fetch_github(kw, max_results=10):
+    for kw in [k.lower() for k in keywords[:10]]:
+        for p in _fetch_github(kw, max_results=8):
             _add_post(p)
 
-    for kw in ["3D Gaussian Splatting", "world model", "gaussian splatting"]:
-        for p in _fetch_youtube(kw, max_results=10):
+    for kw in keywords[:8]:
+        for p in _fetch_youtube(kw, max_results=8):
             _add_post(p)
 
-    for kw in ["3d gaussian splatting", "world model", "gaussian splatting"]:
-        for p in _fetch_huggingface(kw, max_results=10):
+    for kw in [k.lower() for k in keywords[:10]]:
+        for p in _fetch_huggingface(kw, max_results=8):
             _add_post(p)
 
     conn = get_connection()

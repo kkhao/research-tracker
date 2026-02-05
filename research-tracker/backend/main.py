@@ -382,6 +382,62 @@ def delete_s2_query(query_id: int):
     return {"status": "ok"}
 
 
+@app.get("/api/crawl-keywords")
+def list_crawl_keywords():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, keyword, scope, active, created_at FROM crawl_keywords ORDER BY created_at DESC"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/crawl-keywords")
+def create_crawl_keyword(payload: dict = Body(...)):
+    keyword = (payload.get("keyword") or "").strip()
+    scope = (payload.get("scope") or "all").strip() or "all"
+    active = 1 if payload.get("active", True) else 0
+    if not keyword:
+        return {"status": "error", "message": "keyword required"}
+    if scope not in ("papers", "community", "company", "all"):
+        scope = "all"
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO crawl_keywords (keyword, scope, active) VALUES (?, ?, ?)",
+        (keyword, scope, active),
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return {"status": "ok", "id": new_id}
+
+
+@app.patch("/api/crawl-keywords/{kw_id}")
+def update_crawl_keyword(kw_id: int, payload: dict = Body(...)):
+    active = payload.get("active")
+    if active is None:
+        return {"status": "error", "message": "active required"}
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE crawl_keywords SET active = ? WHERE id = ?", (1 if active else 0, kw_id))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+
+@app.delete("/api/crawl-keywords/{kw_id}")
+def delete_crawl_keyword(kw_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM crawl_keywords WHERE id = ?", (kw_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+
 @app.get("/api/notifications")
 def list_notifications(
     unread: bool | None = Query(None),

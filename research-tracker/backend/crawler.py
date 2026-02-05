@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import sqlite3
 import requests
 
-from database import get_connection, init_db
+from database import get_connection, init_db, load_crawl_keywords
 from tagging import tag_paper, tags_to_str
 
 ARXIV_API = "http://export.arxiv.org/api/query"
@@ -34,9 +34,22 @@ S2_DEFAULT_QUERIES = [
     "world model",
     "\"3D Gaussian Splatting\"",
     "3DGS",
+    "4D Gaussian Splatting",
     "physics simulation",
+    "MPM physics",
     "embodied AI",
     "scene understanding",
+    "diffusion model 3D",
+    "virtual reality",
+    "augmented reality",
+    "relighting",
+    "inverse rendering",
+    "3D reconstruction",
+    "3D generation",
+    "human avatar",
+    "character animation",
+    "Gaussian splatting editing",
+    "underwater 3D reconstruction",
 ]
 
 
@@ -203,7 +216,9 @@ def fetch_semantic_scholar_papers(days: int = 7, max_results: int = 150) -> list
         except ValueError:
             return None
 
-    queries = _load_s2_queries()
+    queries = load_crawl_keywords("papers")
+    if not queries:
+        queries = _load_s2_queries()
     if not queries:
         queries = S2_DEFAULT_QUERIES
 

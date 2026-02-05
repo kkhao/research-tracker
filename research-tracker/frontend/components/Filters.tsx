@@ -38,14 +38,22 @@ const RESEARCH_DOMAINS = [
 const TAG_OPTIONS = [
   { value: "", label: "全部标签" },
   { value: "3DGS", label: "3DGS" },
+  { value: "4DGS", label: "4DGS" },
   { value: "NeRF", label: "NeRF" },
   { value: "世界模型", label: "世界模型" },
   { value: "视频生成", label: "视频生成" },
   { value: "物理仿真", label: "物理仿真" },
   { value: "具身智能", label: "具身智能" },
   { value: "大模型", label: "大模型" },
+  { value: "扩散模型", label: "扩散模型" },
   { value: "3D生成", label: "3D生成" },
   { value: "3D设计", label: "3D设计" },
+  { value: "VR/AR", label: "VR/AR" },
+  { value: "可重光照", label: "可重光照" },
+  { value: "逆渲染", label: "逆渲染" },
+  { value: "人体/角色", label: "人体/角色" },
+  { value: "3DGS编辑", label: "3DGS编辑" },
+  { value: "水下建模", label: "水下建模" },
 ];
 
 const DAY_OPTIONS = [

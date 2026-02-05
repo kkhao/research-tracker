@@ -84,6 +84,15 @@ def init_db():
         )
     """)
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS crawl_keywords (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL,
+            scope TEXT DEFAULT 'all',
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             paper_id TEXT NOT NULL,
@@ -136,3 +145,16 @@ def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def load_crawl_keywords(scope: str) -> list[str]:
+    """Load active crawl keywords for given scope. scope: papers|community|company|all."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT keyword FROM crawl_keywords WHERE active = 1 AND (scope = ? OR scope = 'all') ORDER BY created_at DESC",
+        (scope,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [r["keyword"].strip() for r in rows if r["keyword"] and r["keyword"].strip()]

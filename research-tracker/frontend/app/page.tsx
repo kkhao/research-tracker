@@ -55,6 +55,14 @@ interface S2Query {
   created_at: string;
 }
 
+interface CrawlKeyword {
+  id: number;
+  keyword: string;
+  scope: string;
+  active: number;
+  created_at: string;
+}
+
 export default function Home() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +76,9 @@ export default function Home() {
   const [newSubValue, setNewSubValue] = useState("");
   const [s2Queries, setS2Queries] = useState<S2Query[]>([]);
   const [newS2Query, setNewS2Query] = useState("");
+  const [crawlKeywords, setCrawlKeywords] = useState<CrawlKeyword[]>([]);
+  const [newCrawlKeyword, setNewCrawlKeyword] = useState("");
+  const [newCrawlScope, setNewCrawlScope] = useState<"papers" | "community" | "company" | "all">("papers");
   const [activeTab, setActiveTab] = useState<"papers" | "community" | "company">("papers");
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -177,6 +188,14 @@ export default function Home() {
     }
   };
 
+  const fetchCrawlKeywords = async () => {
+    const res = await fetch(`${API_BASE}/api/crawl-keywords`);
+    if (res.ok) {
+      const data = await res.json();
+      setCrawlKeywords(data);
+    }
+  };
+
   const fetchPosts = async (): Promise<Post[]> => {
     setPostsLoading(true);
     setPostsError(null);
@@ -258,6 +277,7 @@ export default function Home() {
     fetchNotifications();
     fetchSubscriptions();
     fetchS2Queries();
+    fetchCrawlKeywords();
   }, []);
 
   const handleRefreshPosts = async () => {
@@ -414,6 +434,46 @@ export default function Home() {
     }
   };
 
+  const addCrawlKeyword = async () => {
+    if (!newCrawlKeyword.trim()) return;
+    const res = await fetch(`${API_BASE}/api/crawl-keywords`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword: newCrawlKeyword.trim(), scope: newCrawlScope }),
+    });
+    if (res.ok) {
+      setNewCrawlKeyword("");
+      await fetchCrawlKeywords();
+    }
+  };
+
+  const toggleCrawlKeyword = async (kw: CrawlKeyword) => {
+    const res = await fetch(`${API_BASE}/api/crawl-keywords/${kw.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: kw.active ? 0 : 1 }),
+    });
+    if (res.ok) {
+      await fetchCrawlKeywords();
+    }
+  };
+
+  const deleteCrawlKeyword = async (kw: CrawlKeyword) => {
+    const res = await fetch(`${API_BASE}/api/crawl-keywords/${kw.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      await fetchCrawlKeywords();
+    }
+  };
+
+  const scopeLabel: Record<string, string> = {
+    papers: "论文",
+    community: "社区",
+    company: "公司",
+    all: "全部",
+  };
+
   const btnBase =
     "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-50";
   const btnPrimary =
@@ -535,10 +595,17 @@ export default function Home() {
                 >
                   <option value="">全部标签</option>
                   <option value="3DGS">3DGS</option>
+                  <option value="4DGS">4DGS</option>
                   <option value="NeRF">NeRF</option>
                   <option value="世界模型">世界模型</option>
                   <option value="大模型">大模型</option>
+                  <option value="扩散模型">扩散模型</option>
                   <option value="具身智能">具身智能</option>
+                  <option value="VR/AR">VR/AR</option>
+                  <option value="可重光照">可重光照</option>
+                  <option value="逆渲染">逆渲染</option>
+                  <option value="人体/角色">人体/角色</option>
+                  <option value="3DGS编辑">3DGS编辑</option>
                   <option value="HN">HN</option>
                   <option value="GitHub">GitHub</option>
                   <option value="Reddit">Reddit</option>
@@ -621,7 +688,13 @@ export default function Home() {
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3D设计">3D设计</option>
                   <option value="大模型">大模型</option>
+                  <option value="扩散模型">扩散模型</option>
                   <option value="具身智能">具身智能</option>
+                  <option value="VR/AR">VR/AR</option>
+                  <option value="可重光照">可重光照</option>
+                  <option value="逆渲染">逆渲染</option>
+                  <option value="人体/角色">人体/角色</option>
+                  <option value="3DGS编辑">3DGS编辑</option>
                 </select>
                 <select
                   value={companyFilters.company}
@@ -831,6 +904,77 @@ export default function Home() {
                           </button>
                           <button
                             onClick={() => deleteS2Query(q)}
+                            className="px-2 py-0.5 rounded text-xs border border-[var(--border)] hover:bg-[var(--border)]"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-sm font-medium text-[var(--text-muted)] mb-3">
+                  抓取关键词（自定义）
+                </div>
+                <p className="text-xs text-[var(--text-faint)] mb-2">
+                  用于论文(S2)、社区(HN/GitHub/YouTube)、公司(Google News)抓取。scope=all 时对所有类型生效。
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    placeholder="3D Gaussian Splatting"
+                    value={newCrawlKeyword}
+                    onChange={(e) => setNewCrawlKeyword(e.target.value)}
+                    className="flex-1 min-w-[140px] px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                  />
+                  <select
+                    value={newCrawlScope}
+                    onChange={(e) =>
+                      setNewCrawlScope(e.target.value as "papers" | "community" | "company" | "all")
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                  >
+                    <option value="papers">论文</option>
+                    <option value="community">社区</option>
+                    <option value="company">公司</option>
+                    <option value="all">全部</option>
+                  </select>
+                  <button
+                    onClick={addCrawlKeyword}
+                    className={`${btnBase} ${btnSecondary}`}
+                  >
+                    添加
+                  </button>
+                </div>
+                {crawlKeywords.length === 0 ? (
+                  <div className="text-sm text-[var(--text-muted)]">暂无自定义关键词，将使用内置默认</div>
+                ) : (
+                  <div className="space-y-2">
+                    {crawlKeywords.map((kw) => (
+                      <div
+                        key={kw.id}
+                        className="flex items-center justify-between gap-3 text-sm py-1.5"
+                      >
+                        <div className="truncate min-w-0">
+                          <span>{kw.keyword}</span>
+                          <span className="ml-1.5 text-xs text-[var(--text-muted)]">
+                            [{scopeLabel[kw.scope] ?? kw.scope}]
+                          </span>
+                          {!kw.active && (
+                            <span className="ml-1 text-xs text-[var(--text-muted)]">(已暂停)</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => toggleCrawlKeyword(kw)}
+                            className="px-2 py-0.5 rounded text-xs border border-[var(--border)] hover:bg-[var(--border)]"
+                          >
+                            {kw.active ? "暂停" : "恢复"}
+                          </button>
+                          <button
+                            onClick={() => deleteCrawlKeyword(kw)}
                             className="px-2 py-0.5 rounded text-xs border border-[var(--border)] hover:bg-[var(--border)]"
                           >
                             删除

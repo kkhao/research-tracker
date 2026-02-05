@@ -49,10 +49,16 @@ uvicorn main:app --reload --port 8000
 4. 社区动态支持 HN、Reddit、GitHub、**Hugging Face**；**YouTube** 需设置 `YOUTUBE_API_KEY`（[获取](https://console.cloud.google.com/apis/credentials)）
 5. **公司动态** 支持 Google News RSS；**微信公众号** 需在 `backend/company_crawler.py` 的 `WECHAT_MP_ALBUMS` 中配置 biz/aid（从公众号文章页 URL 获取），可选设置 `RSSHUB_BASE_URL` 使用自建 RSSHub 实例
 
+## 功能说明
+
+详见 [docs/功能说明.md](docs/功能说明.md)
+
 ## 目录结构
 
 ```
 research-tracker/
+├── docs/             # 文档
+│   └── 功能说明.md
 ├── backend/          # FastAPI 后端
 │   ├── main.py       # API 入口
 │   ├── crawler.py    # arXiv 爬虫

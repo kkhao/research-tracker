@@ -19,7 +19,7 @@ def _strip_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-from database import get_connection, init_db
+from database import get_connection, init_db, load_crawl_keywords
 from tagging import tag_company_post, tags_to_str
 
 # 方向 -> 公司列表（每方向约5家）
@@ -210,6 +210,11 @@ def fetch_and_store_company_posts() -> int:
         for p in _fetch_company_news(company, max_results=5):
             _add_post(p)
         for p in _fetch_wechat_news(company, max_results=5):
+            _add_post(p)
+
+    # 自定义关键词：作为额外 Google News 搜索
+    for kw in load_crawl_keywords("company"):
+        for p in _fetch_company_news(kw, max_results=5):
             _add_post(p)
     conn = get_connection()
     cursor = conn.cursor()
