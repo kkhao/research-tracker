@@ -20,9 +20,14 @@ interface FiltersProps {
 
 const CATEGORIES = [
   { value: "", label: "全部分类" },
-  { value: "cs.CV", label: "3D视觉与重建" },
+  { value: "cs.CV", label: "计算机视觉" },
+  { value: "cs.LG", label: "机器学习" },
   { value: "cs.GR", label: "图形学与渲染" },
   { value: "cs.RO", label: "机器人与具身" },
+  { value: "cs.CL", label: "自然语言处理" },
+  { value: "cs.AI", label: "人工智能" },
+  { value: "cs.MM", label: "多媒体" },
+  { value: "eess.IV", label: "图像/视频处理" },
 ];
 
 // 与 backend/tagging.py PAPER_TAG_KEYWORDS 对齐

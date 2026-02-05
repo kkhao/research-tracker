@@ -10,7 +10,7 @@ from tagging import tag_paper, tags_to_str, BUSINESS_TAGS
 
 ARXIV_API = "http://export.arxiv.org/api/query"
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
-ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO"]
+ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO", "cs.CL", "cs.AI", "cs.MM", "eess.IV"]
 
 OPENREVIEW_API = "https://api.openreview.net/notes"
 # 仅 2025 年及以后的会议
@@ -110,7 +110,7 @@ def fetch_recent_papers(days: int = 7, max_results: int = 150) -> list[dict]:
             "sortBy": "submittedDate",
             "sortOrder": "descending",
             "start": 0,
-            "max_results": max_results // 4,
+            "max_results": max(max_results // len(ARXIV_CATEGORIES), 15),
         }
         try:
             r = requests.get(ARXIV_API, params=params, timeout=30)
