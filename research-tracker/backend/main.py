@@ -1,4 +1,5 @@
 """FastAPI backend for research paper tracker."""
+import os
 from pathlib import Path
 from time import time
 from dotenv import load_dotenv
@@ -269,9 +270,23 @@ def refresh_posts(
     source: str | None = Query(None, description="Only fetch from this platform (hn/reddit/youtube). Omit for all."),
 ):
     """Trigger crawl to fetch community posts (HN, Reddit, YouTube). Supports tag, source, days filters."""
-    count = fetch_and_store_posts(days=days, tag=tag, source=source)
+    count, errors = fetch_and_store_posts(days=days, tag=tag, source=source)
     _invalidate_tags_cache()
-    return {"status": "ok", "posts_added": count}
+    hint = None
+    if errors:
+        hint = "抓取错误: " + "; ".join(errors[:3]) + ("…" if len(errors) > 3 else "")
+    elif count == 0 and source:
+        src = source.strip().lower()
+        if src == "youtube":
+            if not os.environ.get("YOUTUBE_API_KEY"):
+                hint = "YouTube 抓取需设置 YOUTUBE_API_KEY 环境变量，请在 backend/.env 中配置（获取：https://console.cloud.google.com/apis/credentials）"
+            else:
+                hint = "YouTube 未返回数据。可能原因：① 403 权限/配额（请在 Google Cloud Console 启用 YouTube Data API v3 并检查配额）；② 网络限制（可设置 HTTPS_PROXY 代理）。查看后端控制台日志获取详细错误"
+        elif src == "reddit":
+            hint = "Reddit 未返回数据。若代理已配置仍失败，请查看后端控制台日志中的具体错误（如连接超时、429 限流等）"
+        elif src == "hn":
+            hint = "HN 未返回数据，请检查网络或尝试设置 HTTPS_PROXY 代理"
+    return {"status": "ok", "posts_added": count, "hint": hint}
 
 
 @app.post("/api/refresh-code")

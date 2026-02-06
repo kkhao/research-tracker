@@ -384,7 +384,7 @@ export default function Home() {
       if (res.ok && data.status === "ok") {
         const fetched = await fetchPosts();
         if (data.posts_added === 0 && fetched.length === 0) {
-          setPostsError("抓取完成但未获取到内容。HN/Reddit/YouTube 可能无法访问，请检查网络或代理");
+          setPostsError(data.hint || "抓取完成但未获取到内容。HN/Reddit/YouTube 可能无法访问，请检查网络或代理");
         }
       } else {
         setPostsError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);

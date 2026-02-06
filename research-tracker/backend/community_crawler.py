@@ -1,6 +1,10 @@
 """Community crawler: Hacker News, Reddit, YouTube."""
 import os
+from pathlib import Path
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent / ".env")
 import requests
 from datetime import datetime, timedelta
 from database import get_connection, init_db, load_crawl_keywords
@@ -14,6 +18,14 @@ YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
 REDDIT_SUBS = ["MachineLearning", "computervision", "LocalLLaMA"]
 # 每个关键词抓取条数（10-20），Reddit 按子版块 limit 单独设置
 COMMUNITY_PER_KEYWORD = min(20, max(10, int(os.getenv("COMMUNITY_PER_KEYWORD", "15"))))
+
+
+def _get_proxies() -> dict | None:
+    """Get proxies from env for requests (Reddit/YouTube 等需代理时使用)."""
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+    if proxy and proxy.strip():
+        return {"http": proxy.strip(), "https": proxy.strip()}
+    return None
 
 
 def _fetch_hn(query: str, max_results: int = 20, created_after_ts: int | None = None) -> list[dict]:
@@ -32,6 +44,7 @@ def _fetch_hn(query: str, max_results: int = 20, created_after_ts: int | None = 
             params=params,
             timeout=20,
             headers={"User-Agent": "ResearchTracker/1.0"},
+            proxies=_get_proxies(),
         )
         r.raise_for_status()
         data = r.json()
@@ -56,15 +69,17 @@ def _fetch_hn(query: str, max_results: int = 20, created_after_ts: int | None = 
     return posts
 
 
-def _fetch_reddit(sub: str, limit: int = 15, cutoff_ts: float | None = None) -> list[dict]:
+def _fetch_reddit(sub: str, limit: int = 15, cutoff_ts: float | None = None, errors: list | None = None) -> list[dict]:
     """Fetch from Reddit (public JSON, no auth). cutoff_ts: only items created after this unix timestamp."""
     posts = []
+    proxies = _get_proxies()
     try:
         r = requests.get(
             f"{REDDIT_BASE}/r/{sub}/new.json",
             params={"limit": limit},
             headers={"User-Agent": "ResearchTracker/1.0"},
             timeout=15,
+            proxies=proxies,
         )
         r.raise_for_status()
         data = r.json()
@@ -89,7 +104,10 @@ def _fetch_reddit(sub: str, limit: int = 15, cutoff_ts: float | None = None) -> 
                 "created_at": datetime.fromtimestamp(created).isoformat() if created else None,
             })
     except Exception as e:
+        err_msg = f"Reddit r/{sub}: {e}"
         print(f"Reddit r/{sub} fetch error: {e}")
+        if errors is not None:
+            errors.append(err_msg)
     return posts
 
 
@@ -102,6 +120,7 @@ def _fetch_youtube(query: str, max_results: int = 15, cutoff_dt: datetime | None
     try:
         r = requests.get(
             YOUTUBE_API,
+            proxies=_get_proxies(),
             params={
                 "part": "snippet",
                 "q": query,
@@ -140,8 +159,16 @@ def _fetch_youtube(query: str, max_results: int = 15, cutoff_dt: datetime | None
                 "channel": snip.get("channelTitle") or "",
                 "created_at": published,
             })
-    except Exception as e:
-        print(f"YouTube fetch error: {e}")
+    except requests.RequestException as e:
+        if hasattr(e, "response") and e.response is not None and e.response.status_code == 403:
+            err_body = ""
+            try:
+                err_body = str(e.response.json().get("error", {}).get("message", ""))
+            except Exception:
+                pass
+            print(f"YouTube 403: {err_body or 'API 未启用或配额/权限受限，请在 Google Cloud Console 启用 YouTube Data API v3 并检查配额'}")
+        else:
+            print(f"YouTube fetch error: {e}")
     return posts
 
 
@@ -169,16 +196,18 @@ def fetch_and_store_posts(
     days: int = 7,
     tag: str | None = None,
     source: str | None = None,
-) -> int:
+) -> tuple[int, list[str]]:
     """Fetch community posts and store in DB.
     days: last N days (7/14/30).
     tag: when set (in POST_TAG_KEYWORDS), only use that tag's keywords for HN/YouTube. Reddit has no keyword search, skipped when tag is set.
     source: when set (hn/reddit/youtube), only fetch from that platform.
+    Returns (inserted_count, list of error messages).
     """
     init_db()
     all_posts = []
     seen_ids = set()
     seen_urls = set()
+    errors: list[str] = []
 
     cutoff = datetime.now() - timedelta(days=days)
     cutoff_ts = int(cutoff.timestamp())
@@ -216,7 +245,7 @@ def fetch_and_store_posts(
 
     if fetch_reddit:
         for sub in REDDIT_SUBS:
-            for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts):
+            for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts, errors=errors):
                 _add_post(p)
 
     if fetch_youtube:
@@ -249,4 +278,4 @@ def fetch_and_store_posts(
             print(f"Error inserting post {p['id']}: {e}")
     conn.commit()
     conn.close()
-    return inserted
+    return inserted, errors

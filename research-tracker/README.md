@@ -49,11 +49,13 @@ uvicorn main:app --reload --port 8000
 4. 社区动态支持 HN、Reddit、GitHub、**Hugging Face**；**YouTube** 需设置 `YOUTUBE_API_KEY`（[获取](https://console.cloud.google.com/apis/credentials)）
 5. **公司动态** 支持 Google News RSS；**微信公众号** 需在 `backend/company_crawler.py` 的 `WECHAT_MP_ALBUMS` 中配置 biz/aid（从公众号文章页 URL 获取），可选设置 `RSSHUB_BASE_URL` 使用自建 RSSHub 实例
 6. **公司动态抓不到数据**：Google News 在中国大陆无法直连。可选方案：① 设置环境变量 `HTTPS_PROXY=http://代理地址:端口` 后启动后端；② 部署到 Railway 等海外平台（海外节点可直连 Google）
+7. **Reddit 抓不到数据**：Reddit 在中国大陆无法直连，需在 `backend/.env` 中设置 `HTTPS_PROXY` 或部署到海外
 
 ## 功能说明
 
 - [docs/功能说明.md](docs/功能说明.md) - 功能概览
 - [docs/标签与抓取逻辑.md](docs/标签与抓取逻辑.md) - 标签分类与各内容抓取逻辑
+- [CHANGELOG.md](CHANGELOG.md) - 更新日志
 
 ## 目录结构
 
