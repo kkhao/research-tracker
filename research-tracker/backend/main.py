@@ -7,7 +7,7 @@ load_dotenv(Path(__file__).parent / ".env")
 from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
-from database import init_db, get_connection
+from database import init_db, get_connection, migrate_diffusion_to_multimodal_tag
 from crawler import fetch_and_store, backfill_paper_tags
 from community_crawler import fetch_and_store_posts
 from company_crawler import fetch_and_store_company_posts, COMPANY_DIRECTIONS, _strip_html as strip_html
@@ -26,6 +26,10 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
+    # Migrate 扩散模型 -> 多模态 in existing papers/posts
+    m = migrate_diffusion_to_multimodal_tag()
+    if m > 0:
+        print(f"[startup] Migrated 扩散模型->多模态 for {m} rows")
     # Backfill tags for existing papers that have NULL/empty tags (enables tag filtering)
     n = backfill_paper_tags()
     if n > 0:

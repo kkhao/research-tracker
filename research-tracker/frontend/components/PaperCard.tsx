@@ -6,7 +6,6 @@ const TAG_CLASSES: Record<string, string> = {
   "3DGS物理仿真": "tag-physics",
   "具身智能": "tag-embodied",
   "多模态": "tag-multimodal",
-  "扩散模型": "tag-diffusion",
   "3D重建/生成/渲染": "tag-3dgen",
   "VR/AR": "tag-vr",
   "3D设计": "tag-3ddesign",

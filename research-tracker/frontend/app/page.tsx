@@ -607,7 +607,6 @@ export default function Home() {
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
                   <option value="多模态">多模态</option>
-                  <option value="扩散模型">扩散模型</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
@@ -628,7 +627,6 @@ export default function Home() {
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
                   <option value="多模态">多模态</option>
-                  <option value="扩散模型">扩散模型</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
@@ -719,7 +717,6 @@ export default function Home() {
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
                   <option value="多模态">多模态</option>
-                  <option value="扩散模型">扩散模型</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="3D设计">3D设计</option>
                   <option value="VR/AR">VR/AR</option>

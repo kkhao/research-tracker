@@ -155,6 +155,28 @@ def get_connection():
     return conn
 
 
+def migrate_diffusion_to_multimodal_tag() -> int:
+    """Replace 扩散模型 with 多模态 in papers and posts tags. Returns total rows updated."""
+    from tagging import str_to_tags, tags_to_str
+    conn = get_connection()
+    cursor = conn.cursor()
+    total = 0
+    for table in ("papers", "posts"):
+        cursor.execute(f"SELECT id, tags FROM {table} WHERE tags IS NOT NULL AND tags != '' AND tags LIKE '%扩散模型%'")
+        rows = cursor.fetchall()
+        for row in rows:
+            tags = str_to_tags(row["tags"])
+            if "扩散模型" not in tags:
+                continue
+            new_tags = [t if t != "扩散模型" else "多模态" for t in tags]
+            new_tags = list(dict.fromkeys(new_tags))  # dedupe
+            cursor.execute(f"UPDATE {table} SET tags = ? WHERE id = ?", (tags_to_str(new_tags), row["id"]))
+            total += 1
+    conn.commit()
+    conn.close()
+    return total
+
+
 def load_crawl_keywords(scope: str) -> list[str]:
     """Load active crawl keywords for given scope. scope: papers|community|company|all."""
     conn = get_connection()
