@@ -104,8 +104,8 @@ export default function Filters({ filters, onChange, section = "main" }: Filters
           ))}
         </select>
         <select
-          value={RESEARCH_DOMAINS.some((d) => d.value === filters.keyword) ? filters.keyword : ""}
-          onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
+          value={RESEARCH_DOMAINS.some((d) => d.value === filters.tag) ? filters.tag : ""}
+          onChange={(e) => onChange({ ...filters, tag: e.target.value })}
           className={inputClass}
         >
           {RESEARCH_DOMAINS.map((d) => (

@@ -43,12 +43,10 @@ OPENREVIEW_HEADERS = {"User-Agent": "ResearchTracker/1.0"}
 # (venue_id, display_name) - 使用 invitation 查询（content.venueid 实测返回空）
 # API v2 格式: {venue_id}/-/Submission; 部分旧会议用 Blind_Submission
 # ICLR/NeurIPS 可用 openreview-py 获取；CVF (CVPR/ICCV/ECCV) 在 OpenReview 上可能受限
+# 仅抓取 2025 及以后的会议
 OPENREVIEW_VENUES = [
-    ("ICLR.cc/2024/Conference", "ICLR 2024 Conference"),
     ("ICLR.cc/2025/Conference", "ICLR 2025 Conference"),
-    ("NeurIPS.cc/2024/Conference", "NeurIPS 2024 Conference"),
     ("NeurIPS.cc/2025/Conference", "NeurIPS 2025 Conference"),
-    ("thecvf.com/CVPR/2024/Conference", "CVPR 2024 Conference"),
     ("thecvf.com/CVPR/2025/Conference", "CVPR 2025 Conference"),
     ("thecvf.com/ICCV/2025/Conference", "ICCV 2025 Conference"),
 ]
@@ -342,27 +340,36 @@ def _fetch_openreview_via_client(venue_id: str, venue_name: str, cutoff_ms: int,
     return papers
 
 
-def fetch_openreview_papers(days: int = 7, max_results: int = 200) -> list[dict]:
-    """Fetch recent papers from OpenReview API. Uses openreview-py when available, else REST."""
+def fetch_openreview_papers(days: int = 7, max_results: int = 500, min_per_venue: int = 10, max_per_venue: int = 20) -> list[dict]:
+    """按会议抓取，每会议 min_per_venue～max_per_venue 篇。"""
     papers = []
     seen_ids = set()
     cutoff_ms = int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
 
     for venue_id, venue_name in OPENREVIEW_VENUES:
+        if len(papers) >= max_results:
+            break
+        venue_quota = min(max_per_venue, max_results - len(papers))
+        if venue_quota <= 0:
+            break
+
         # 优先用 openreview-py 客户端（支持 API v2）
         client_papers = _fetch_openreview_via_client(
-            venue_id, venue_name, cutoff_ms, seen_ids, max_results - len(papers)
+            venue_id, venue_name, cutoff_ms, seen_ids, venue_quota
         )
         if client_papers:
             papers.extend(client_papers)
             continue
 
         # 回退到 REST API（api.openreview.net 对部分旧会议有效）
+        venue_count = 0
         for inv_suffix in ["Submission", "Blind_Submission"]:
+            if venue_count >= max_per_venue:
+                break
             invitation = f"{venue_id}/-/{inv_suffix}"
             offset = 0
             got_any = False
-            while len(papers) < max_results:
+            while venue_count < max_per_venue and len(papers) < max_results:
                 params = {
                     "invitation": invitation,
                     "limit": 100,
@@ -418,7 +425,8 @@ def fetch_openreview_papers(days: int = 7, max_results: int = 200) -> list[dict]
                         "updated_at": None,
                     })
                     seen_ids.add(note_id)
-                    if len(papers) >= max_results:
+                    venue_count += 1
+                    if venue_count >= max_per_venue or len(papers) >= max_results:
                         break
 
                 offset += len(notes)
