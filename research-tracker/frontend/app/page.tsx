@@ -80,12 +80,19 @@ export default function Home() {
   const [crawlKeywords, setCrawlKeywords] = useState<CrawlKeyword[]>([]);
   const [newCrawlKeyword, setNewCrawlKeyword] = useState("");
   const [newCrawlScope, setNewCrawlScope] = useState<"papers" | "community" | "company" | "all">("papers");
-  const [activeTab, setActiveTab] = useState<"papers" | "community" | "company">("papers");
+  const [activeTab, setActiveTab] = useState<"papers" | "code" | "community" | "company">("papers");
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsRefreshing, setPostsRefreshing] = useState(false);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [postFilters, setPostFilters] = useState({
+    source: "",
+    search: "",
+    domain: "",
+    tag: "",
+    days: 365,
+  });
+  const [codeFilters, setCodeFilters] = useState({
     source: "",
     search: "",
     domain: "",
@@ -118,6 +125,7 @@ export default function Home() {
   const debouncedAffiliation = useDebounce(filters.affiliation, 300);
   const debouncedKeyword = useDebounce(filters.keyword, 300);
   const debouncedPostSearch = useDebounce(postFilters.search, 300);
+  const debouncedCodeSearch = useDebounce(codeFilters.search, 300);
   const debouncedCompanySearch = useDebounce(companyFilters.search, 300);
 
   const fetchPapers = async (effective: typeof filters) => {
@@ -137,7 +145,7 @@ export default function Home() {
       if (effective.from_date) params.set("from_date", effective.from_date);
       if (effective.to_date) params.set("to_date", effective.to_date);
       if (effective.min_citations) params.set("min_citations", effective.min_citations);
-      params.set("limit", "150");
+      params.set("limit", "200");
 
       const res = await fetch(`${API_BASE}/api/papers?${params}`);
       if (res.ok) {
@@ -210,6 +218,40 @@ export default function Home() {
     }
   };
 
+  const fetchCodePosts = async (): Promise<Post[]> => {
+    setPostsLoading(true);
+    setPostsError(null);
+    try {
+      const params = new URLSearchParams();
+      if (codeFilters.source) {
+        params.set("source", codeFilters.source);
+      } else {
+        params.append("source", "github");
+        params.append("source", "huggingface");
+      }
+      if (debouncedCodeSearch) params.set("search", debouncedCodeSearch);
+      if (codeFilters.domain) params.set("domain", codeFilters.domain);
+      if (codeFilters.tag) params.set("tag", codeFilters.tag);
+      params.set("days", String(codeFilters.days));
+      params.set("limit", "200");
+      const res = await fetch(`${API_BASE}/api/posts?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data);
+        return data;
+      }
+      setPosts([]);
+      setPostsError(`请求失败: ${res.status}`);
+      return [];
+    } catch {
+      setPosts([]);
+      setPostsError(`无法连接后端 (${API_BASE})`);
+      return [];
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
   const fetchPosts = async (): Promise<Post[]> => {
     setPostsLoading(true);
     setPostsError(null);
@@ -220,7 +262,7 @@ export default function Home() {
       if (postFilters.domain) params.set("domain", postFilters.domain);
       if (postFilters.tag) params.set("tag", postFilters.tag);
       params.set("days", String(postFilters.days));
-      params.set("limit", "150");
+      params.set("limit", "200");
       const res = await fetch(`${API_BASE}/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -250,7 +292,7 @@ export default function Home() {
       if (debouncedCompanySearch) params.set("search", debouncedCompanySearch);
       if (companyFilters.tag) params.set("tag", companyFilters.tag);
       params.set("days", String(companyFilters.days));
-      params.set("limit", "150");
+      params.set("limit", "200");
       const res = await fetch(`${API_BASE}/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -271,6 +313,7 @@ export default function Home() {
 
   useEffect(() => {
     if (activeTab === "community") fetchPosts();
+    if (activeTab === "code") fetchCodePosts();
     if (activeTab === "company") fetchCompanyPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -280,6 +323,11 @@ export default function Home() {
     postFilters.domain,
     postFilters.tag,
     postFilters.days,
+    codeFilters.source,
+    debouncedCodeSearch,
+    codeFilters.domain,
+    codeFilters.tag,
+    codeFilters.days,
     companyFilters.direction,
     companyFilters.company,
     debouncedCompanySearch,
@@ -294,6 +342,27 @@ export default function Home() {
     fetchCrawlKeywords();
   }, []);
 
+  const handleRefreshCodePosts = async () => {
+    setPostsRefreshing(true);
+    setPostsError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/refresh-code`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.status === "ok") {
+        const fetched = await fetchCodePosts();
+        if (data.posts_added === 0 && fetched.length === 0) {
+          setPostsError("抓取完成但未获取到内容。GitHub/Hugging Face 可能无法访问，请检查网络或代理");
+        }
+      } else {
+        setPostsError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);
+      }
+    } catch {
+      setPostsError(`无法连接后端 (${API_BASE})`);
+    } finally {
+      setPostsRefreshing(false);
+    }
+  };
+
   const handleRefreshPosts = async () => {
     setPostsRefreshing(true);
     setPostsError(null);
@@ -305,7 +374,7 @@ export default function Home() {
       if (res.ok && data.status === "ok") {
         const fetched = await fetchPosts();
         if (data.posts_added === 0 && fetched.length === 0) {
-          setPostsError("抓取完成但未获取到内容。HN/Reddit/GitHub 可能无法访问，请检查网络或代理");
+          setPostsError("抓取完成但未获取到内容。HN/Reddit/YouTube 可能无法访问，请检查网络或代理");
         }
       } else {
         setPostsError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);
@@ -551,6 +620,16 @@ export default function Home() {
                 论文
               </button>
               <button
+                onClick={() => setActiveTab("code")}
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === "code"
+                    ? "bg-[var(--accent)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--tag-bg-hover)]"
+                }`}
+              >
+                代码动态
+              </button>
+              <button
                 onClick={() => setActiveTab("community")}
                 className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   activeTab === "community"
@@ -581,6 +660,95 @@ export default function Home() {
                 >
                   {refreshing ? "抓取中…" : "从 arXiv 更新"}
                 </button>
+              </div>
+            )}
+            {activeTab === "code" && (
+              <div className="flex flex-wrap items-center gap-3 flex-1">
+                <input
+                  type="search"
+                  placeholder="搜索..."
+                  value={codeFilters.search}
+                  onChange={(e) =>
+                    setCodeFilters((f) => ({ ...f, search: e.target.value }))
+                  }
+                  className="min-w-[120px] max-w-[180px] px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+                <select
+                  value={codeFilters.domain}
+                  onChange={(e) =>
+                    setCodeFilters((f) => ({ ...f, domain: e.target.value }))
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                >
+                  <option value="">全部领域</option>
+                  <option value="3DGS">3DGS</option>
+                  <option value="视频/世界模型">视频/世界模型</option>
+                  <option value="3DGS物理仿真">3DGS物理仿真</option>
+                  <option value="具身智能">具身智能</option>
+                  <option value="多模态">多模态</option>
+                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
+                  <option value="VR/AR">VR/AR</option>
+                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
+                  <option value="3D人体/角色">3D人体/角色</option>
+                  <option value="3DGS编辑">3DGS编辑</option>
+                  <option value="3DGS水下建模">3DGS水下建模</option>
+                </select>
+                <select
+                  value={codeFilters.tag}
+                  onChange={(e) =>
+                    setCodeFilters((f) => ({ ...f, tag: e.target.value }))
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                >
+                  <option value="">全部标签</option>
+                  <option value="3DGS">3DGS</option>
+                  <option value="视频/世界模型">视频/世界模型</option>
+                  <option value="3DGS物理仿真">3DGS物理仿真</option>
+                  <option value="具身智能">具身智能</option>
+                  <option value="多模态">多模态</option>
+                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
+                  <option value="VR/AR">VR/AR</option>
+                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
+                  <option value="3D人体/角色">3D人体/角色</option>
+                  <option value="3DGS编辑">3DGS编辑</option>
+                  <option value="3DGS水下建模">3DGS水下建模</option>
+                  <option value="GitHub">GitHub</option>
+                  <option value="Hugging Face">Hugging Face</option>
+                </select>
+                <select
+                  value={codeFilters.source}
+                  onChange={(e) =>
+                    setCodeFilters((f) => ({ ...f, source: e.target.value }))
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                >
+                  <option value="">全部来源</option>
+                  <option value="github">GitHub</option>
+                  <option value="huggingface">Hugging Face</option>
+                </select>
+                <div className="flex items-center gap-2 shrink-0">
+                  <select
+                    value={codeFilters.days}
+                    onChange={(e) =>
+                      setCodeFilters((f) => ({
+                        ...f,
+                        days: Number(e.target.value),
+                      }))
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                  >
+                    <option value={30}>近30天</option>
+                    <option value={90}>近90天</option>
+                    <option value={365}>全部</option>
+                  </select>
+                  <button
+                    onClick={handleRefreshCodePosts}
+                    disabled={postsRefreshing}
+                    className={`${btnBase} ${btnSecondary}`}
+                  >
+                    {postsRefreshing ? "抓取中…" : "刷新代码"}
+                  </button>
+                </div>
               </div>
             )}
             {activeTab === "community" && (
@@ -634,10 +802,8 @@ export default function Home() {
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
                   <option value="HN">HN</option>
-                  <option value="GitHub">GitHub</option>
                   <option value="Reddit">Reddit</option>
                   <option value="YouTube">YouTube</option>
-                  <option value="Hugging Face">Hugging Face</option>
                 </select>
                 <select
                   value={postFilters.source}
@@ -649,9 +815,7 @@ export default function Home() {
                   <option value="">全部来源</option>
                   <option value="hn">Hacker News</option>
                   <option value="reddit">Reddit</option>
-                  <option value="github">GitHub</option>
                   <option value="youtube">YouTube</option>
-                  <option value="huggingface">Hugging Face</option>
                 </select>
                 <div className="flex items-center gap-2 shrink-0">
                   <select
@@ -981,7 +1145,7 @@ export default function Home() {
                   抓取关键词（自定义）
                 </div>
                 <p className="text-xs text-[var(--text-faint)] mb-2">
-                  用于论文(S2)、社区(HN/GitHub/YouTube)、公司(Google News)抓取。scope=all 时对所有类型生效。
+                  用于论文(S2)、社区(HN/Reddit/YouTube)、代码(GitHub/Hugging Face)、公司(Google News)抓取。scope=all 时对所有类型生效。
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                   <input
@@ -1108,7 +1272,7 @@ export default function Home() {
             )}
           </>
         )}
-        {(activeTab === "community" || activeTab === "company") && (
+        {(activeTab === "code" || activeTab === "community" || activeTab === "company") && (
           <>
             {postsLoading ? (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -1118,7 +1282,11 @@ export default function Home() {
             ) : posts.length === 0 ? (
               <div className="text-center py-24 px-6 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg-card)]">
                 <p className="text-[var(--text-muted)] mb-2 font-medium">
-                  {activeTab === "company" ? "暂无公司动态" : "暂无社区动态"}
+                  {activeTab === "company"
+                    ? "暂无公司动态"
+                    : activeTab === "code"
+                      ? "暂无代码动态"
+                      : "暂无社区动态"}
                 </p>
                 {postsError ? (
                   <p className="text-sm text-[var(--error)] mb-4">{postsError}</p>
@@ -1126,15 +1294,29 @@ export default function Home() {
                   <p className="text-sm mb-4">
                     {activeTab === "company"
                       ? "点击「刷新公司」从 Google News 抓取公司产品动态"
-                      : "点击「刷新社区」从 HN / Reddit / GitHub 抓取"}
+                      : activeTab === "code"
+                        ? "点击「刷新代码」从 GitHub / Hugging Face 抓取"
+                        : "点击「刷新社区」从 HN / Reddit / YouTube 抓取"}
                   </p>
                 )}
                 <button
-                  onClick={activeTab === "company" ? handleRefreshCompanyPosts : handleRefreshPosts}
+                  onClick={
+                    activeTab === "company"
+                      ? handleRefreshCompanyPosts
+                      : activeTab === "code"
+                        ? handleRefreshCodePosts
+                        : handleRefreshPosts
+                  }
                   disabled={postsRefreshing}
                   className={`${btnBase} ${btnPrimary} mt-4`}
                 >
-                  {postsRefreshing ? "抓取中…" : activeTab === "company" ? "刷新公司" : "刷新社区"}
+                  {postsRefreshing
+                    ? "抓取中…"
+                    : activeTab === "company"
+                      ? "刷新公司"
+                      : activeTab === "code"
+                        ? "刷新代码"
+                        : "刷新社区"}
                 </button>
               </div>
             ) : (

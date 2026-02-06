@@ -1,4 +1,4 @@
-"""Community crawler: Hacker News, Reddit, GitHub, YouTube, Hugging Face."""
+"""Community crawler: Hacker News, Reddit, YouTube."""
 import os
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
@@ -8,9 +8,7 @@ from tagging import tag_post, tags_to_str
 
 HN_API = "https://hn.algolia.com/api/v1/search"
 REDDIT_BASE = "https://www.reddit.com"
-GITHUB_API = "https://api.github.com/search/repositories"
 YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
-HF_API = "https://huggingface.co/api/models"
 
 # 统一抓取关键词（HN/GitHub/YouTube/HuggingFace 共用）
 COMMUNITY_KEYWORDS = [
@@ -32,6 +30,8 @@ COMMUNITY_KEYWORDS = [
 ]
 
 REDDIT_SUBS = ["MachineLearning", "computervision", "LocalLLaMA"]
+# 每个关键词抓取条数（10-20），Reddit 按子版块 limit 单独设置
+COMMUNITY_PER_KEYWORD = min(20, max(10, int(os.getenv("COMMUNITY_PER_KEYWORD", "15"))))
 
 
 def _fetch_hn(query: str, max_results: int = 20) -> list[dict]:
@@ -106,39 +106,6 @@ def _fetch_reddit(sub: str, limit: int = 15) -> list[dict]:
     return posts
 
 
-def _fetch_github(query: str, max_results: int = 15) -> list[dict]:
-    """Fetch from GitHub search (repos)."""
-    posts = []
-    try:
-        r = requests.get(
-            GITHUB_API,
-            params={"q": query, "sort": "created", "per_page": max_results},
-            headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "ResearchTracker"},
-            timeout=15,
-        )
-        r.raise_for_status()
-        data = r.json()
-        for item in data.get("items", []):
-            full_name = item.get("full_name") or item.get("name")
-            if not full_name:
-                continue
-            posts.append({
-                "id": f"github_{item.get('id', full_name)}",
-                "source": "github",
-                "title": (item.get("full_name") or item.get("name") or "").strip(),
-                "url": item.get("html_url") or "",
-                "author": item.get("owner", {}).get("login") or "",
-                "score": item.get("stargazers_count") or 0,
-                "comment_count": 0,
-                "summary": (item.get("description") or "")[:500],
-                "channel": "",
-                "created_at": item.get("created_at"),
-            })
-    except Exception as e:
-        print(f"GitHub fetch error: {e}")
-    return posts
-
-
 def _fetch_youtube(query: str, max_results: int = 15) -> list[dict]:
     """Fetch from YouTube Data API v3 (requires YOUTUBE_API_KEY env)."""
     posts = []
@@ -184,45 +151,6 @@ def _fetch_youtube(query: str, max_results: int = 15) -> list[dict]:
     return posts
 
 
-def _fetch_huggingface(query: str, max_results: int = 15) -> list[dict]:
-    """Fetch from Hugging Face Hub (models)."""
-    posts = []
-    try:
-        r = requests.get(
-            HF_API,
-            params={
-                "search": query,
-                "limit": min(max_results, 50),
-                "sort": "downloads",
-            },
-            timeout=20,
-            headers={"User-Agent": "ResearchTracker/1.0"},
-        )
-        r.raise_for_status()
-        data = r.json()
-        for item in data:
-            model_id = item.get("modelId") or item.get("id")
-            if not model_id:
-                continue
-            author = model_id.split("/")[0] if "/" in model_id else ""
-            created = item.get("createdAt") or item.get("lastModified")
-            posts.append({
-                "id": f"hf_{model_id.replace('/', '_')}",
-                "source": "huggingface",
-                "title": model_id,
-                "url": f"https://huggingface.co/{model_id}",
-                "author": author,
-                "score": item.get("downloads") or item.get("likes") or 0,
-                "comment_count": 0,
-                "summary": "",
-                "channel": ", ".join(item.get("tags", [])[:3]) if item.get("tags") else "",
-                "created_at": created,
-            })
-    except Exception as e:
-        print(f"Hugging Face fetch error: {e}")
-    return posts
-
-
 def _normalize_url(url: str) -> str:
     """Normalize URL for deduplication: strip tracking params, fragment, trailing slash."""
     if not url or not url.strip():
@@ -264,25 +192,17 @@ def fetch_and_store_posts(days: int = 7) -> int:
     keywords = load_crawl_keywords("community")
     if not keywords:
         keywords = COMMUNITY_KEYWORDS
-    # 使用关键词统一抓取
-    for kw in keywords[:8]:  # HN 限制数量避免请求过多
-        for p in _fetch_hn(kw, max_results=8):
+    # 使用全部关键词统一抓取，每关键词 10-20 条（COMMUNITY_PER_KEYWORD）
+    for kw in keywords:
+        for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD):
             _add_post(p)
 
     for sub in REDDIT_SUBS:
-        for p in _fetch_reddit(sub, limit=15):
+        for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD):
             _add_post(p)
 
-    for kw in [k.lower() for k in keywords[:10]]:
-        for p in _fetch_github(kw, max_results=8):
-            _add_post(p)
-
-    for kw in keywords[:8]:
-        for p in _fetch_youtube(kw, max_results=8):
-            _add_post(p)
-
-    for kw in [k.lower() for k in keywords[:10]]:
-        for p in _fetch_huggingface(kw, max_results=8):
+    for kw in keywords:
+        for p in _fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD):
             _add_post(p)
 
     conn = get_connection()

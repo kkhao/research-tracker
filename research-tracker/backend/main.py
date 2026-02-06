@@ -11,6 +11,7 @@ from database import init_db, get_connection, migrate_diffusion_to_multimodal_ta
 from crawler import fetch_and_store, backfill_paper_tags
 from community_crawler import fetch_and_store_posts
 from company_crawler import fetch_and_store_company_posts, COMPANY_DIRECTIONS, _strip_html as strip_html
+from code_crawler import fetch_and_store_code_posts
 
 app = FastAPI(title="Research Tracker API", version="1.0.0")
 
@@ -176,7 +177,7 @@ def backfill_tags(force: bool = Query(False, description="If true, re-tag all pa
 
 @app.get("/api/posts")
 def list_posts(
-    source: str | None = Query(None, description="Filter by source (hn/reddit/github/youtube/huggingface/company)"),
+    source: str | list[str] | None = Query(None, description="Filter by source (single or multiple: hn/reddit/youtube/github/huggingface/company)"),
     search: str | None = Query(None, description="Search in title/summary"),
     domain: str | None = Query(None, description="Filter by domain keyword (3DGS, world model, etc.)"),
     company: str | None = Query(None, description="Filter by company name (for source=company)"),
@@ -191,8 +192,13 @@ def list_posts(
     query = "SELECT * FROM posts WHERE 1=1"
     params = []
     if source:
-        query += " AND source = ?"
-        params.append(source)
+        if isinstance(source, str):
+            query += " AND source = ?"
+            params.append(source)
+        else:
+            placeholders = ",".join("?" * len(source))
+            query += f" AND source IN ({placeholders})"
+            params.extend(source)
     if company:
         query += " AND source = 'company' AND channel = ?"
         params.append(company)
@@ -258,8 +264,16 @@ def list_posts(
 
 @app.post("/api/refresh-posts")
 def refresh_posts(days: int = Query(7, ge=1, le=30)):
-    """Trigger crawl to fetch community posts."""
+    """Trigger crawl to fetch community posts (HN, Reddit, YouTube)."""
     count = fetch_and_store_posts(days=days)
+    _invalidate_tags_cache()
+    return {"status": "ok", "posts_added": count}
+
+
+@app.post("/api/refresh-code")
+def refresh_code_posts():
+    """Trigger crawl to fetch code posts (GitHub, Hugging Face)."""
+    count = fetch_and_store_code_posts()
     _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count}
 
