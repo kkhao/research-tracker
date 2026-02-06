@@ -52,14 +52,16 @@ uvicorn main:app --reload --port 8000
 
 ## 功能说明
 
-详见 [docs/功能说明.md](docs/功能说明.md)
+- [docs/功能说明.md](docs/功能说明.md) - 功能概览
+- [docs/标签与抓取逻辑.md](docs/标签与抓取逻辑.md) - 标签分类与各内容抓取逻辑
 
 ## 目录结构
 
 ```
 research-tracker/
 ├── docs/             # 文档
-│   └── 功能说明.md
+│   ├── 功能说明.md
+│   └── 标签与抓取逻辑.md
 ├── backend/          # FastAPI 后端
 │   ├── main.py       # API 入口
 │   ├── crawler.py    # arXiv 爬虫

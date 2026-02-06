@@ -6,9 +6,18 @@ import sqlite3
 import requests
 
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_paper, tags_to_str, BUSINESS_TAGS
+from tagging import tag_paper, tags_to_str, BUSINESS_TAGS, PAPER_TAG_KEYWORDS
 
 ARXIV_API = "http://export.arxiv.org/api/query"
+
+# arXiv 按关键词搜索：从 PAPER_TAG_KEYWORDS 展平，用于替代按分类抓取
+ARXIV_SEARCH_KEYWORDS = []
+for kws in PAPER_TAG_KEYWORDS.values():
+    for kw in kws:
+        k = kw.strip()
+        if len(k) >= 3 and k not in ARXIV_SEARCH_KEYWORDS:
+            ARXIV_SEARCH_KEYWORDS.append(k)
+ARXIV_SEARCH_KEYWORDS = ARXIV_SEARCH_KEYWORDS[:35]  # 限制数量，避免请求过多
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO", "cs.CL", "cs.AI", "cs.MM", "eess.IV"]
 
@@ -100,17 +109,55 @@ def _parse_entry(entry) -> dict | None:
     }
 
 
-def fetch_recent_papers(days: int = 7, max_results: int = 150) -> list[dict]:
-    """Fetch recent papers from arXiv API."""
+def _build_arxiv_keyword_query(keywords: list[str], batch_size: int = 6) -> list[str]:
+    """Build arXiv search_query strings: (all:kw1+OR+...)+AND+(cat:cs.CV+OR+...)."""
+    cat_part = "+OR+".join(f"cat:{c}" for c in ARXIV_CATEGORIES)
+    cat_part = f"({cat_part})"
+    queries = []
+    for i in range(0, len(keywords), batch_size):
+        batch = keywords[i : i + batch_size]
+        terms = []
+        for kw in batch:
+            if " " in kw:
+                # 短语用引号，空格编码为 +
+                terms.append(f'all:"{kw.replace(" ", "+")}"')
+            else:
+                terms.append(f"all:{kw}")
+        kw_part = "+OR+".join(terms)
+        queries.append(f"({kw_part})+AND+{cat_part}")
+    return queries
+
+
+def fetch_recent_papers(days: int = 7, max_results: int = 200) -> list[dict]:
+    """Fetch recent papers from arXiv API by keyword search (与标签关键词对齐)."""
     papers = []
     seen_ids = set()
-    for cat in ARXIV_CATEGORIES:
+
+    if not ARXIV_SEARCH_KEYWORDS:
+        # 无关键词时回退到按分类抓取
+        keyword_queries = [f"cat:{c}" for c in ARXIV_CATEGORIES]
+        per_query = max(max_results // len(ARXIV_CATEGORIES), 15)
+        use_date_filter = False
+    else:
+        keyword_queries = _build_arxiv_keyword_query(ARXIV_SEARCH_KEYWORDS)
+        per_query = max(max_results // len(keyword_queries), 25)
+        use_date_filter = True
+
+    # 日期范围过滤（arXiv submittedDate 格式：YYYYMMDDHHMM）
+    end_dt = datetime.now(timezone.utc)
+    start_dt = end_dt - timedelta(days=days)
+    date_range = f"submittedDate:[{start_dt:%Y%m%d%H%M}+TO+{end_dt:%Y%m%d%H%M}]"
+
+    for q in keyword_queries:
+        if len(papers) >= max_results:
+            break
+        search_query = f"({q})+AND+{date_range}" if use_date_filter else q
         params = {
-            "search_query": f"cat:{cat}",
+            "search_query": search_query,
             "sortBy": "submittedDate",
             "sortOrder": "descending",
             "start": 0,
-            "max_results": max(max_results // len(ARXIV_CATEGORIES), 15),
+            "max_results": min(per_query, max_results - len(papers)),
         }
         try:
             r = requests.get(ARXIV_API, params=params, timeout=30)
@@ -208,7 +255,7 @@ def _fetch_openreview_via_client(venue_id: str, venue_name: str, cutoff_ms: int,
     return papers
 
 
-def fetch_openreview_papers(days: int = 7, max_results: int = 150) -> list[dict]:
+def fetch_openreview_papers(days: int = 7, max_results: int = 200) -> list[dict]:
     """Fetch recent papers from OpenReview API. Uses openreview-py when available, else REST."""
     papers = []
     seen_ids = set()
@@ -297,7 +344,7 @@ def fetch_openreview_papers(days: int = 7, max_results: int = 150) -> list[dict]
     return papers[:max_results]
 
 
-def fetch_semantic_scholar_papers(days: int = 7, max_results: int = 150) -> list[dict]:
+def fetch_semantic_scholar_papers(days: int = 7, max_results: int = 200) -> list[dict]:
     """Fetch recent papers from Semantic Scholar (public Graph API)."""
     papers = []
     seen_ids = set()

@@ -2,14 +2,18 @@ import type { Paper } from "@/app/page";
 
 const TAG_CLASSES: Record<string, string> = {
   "3DGS": "tag-3dgs",
-  "NeRF": "tag-nerf",
-  "世界模型": "tag-world",
-  "视频生成": "tag-video",
-  "物理仿真": "tag-physics",
+  "视频/世界模型": "tag-video-world",
+  "3DGS物理仿真": "tag-physics",
   "具身智能": "tag-embodied",
-  "大模型": "tag-llm",
-  "3D生成": "tag-3dgen",
+  "多模态": "tag-multimodal",
+  "扩散模型": "tag-diffusion",
+  "3D重建/生成/渲染": "tag-3dgen",
+  "VR/AR": "tag-vr",
   "3D设计": "tag-3ddesign",
+  "可重光照/逆渲染": "tag-relight",
+  "3D人体/角色": "tag-human",
+  "3DGS编辑": "tag-3dgs-edit",
+  "3DGS水下建模": "tag-underwater",
 };
 
 function getTagClass(tag: string): string {

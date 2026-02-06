@@ -4,45 +4,34 @@ from typing import Sequence
 
 # 研究方向标签：tag -> 匹配关键词（title/abstract/summary 中不区分大小写）
 PAPER_TAG_KEYWORDS: dict[str, list[str]] = {
-    "3DGS": ["3d gaussian", "3dgs"],
-    "4DGS": ["4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian"],
-    "NeRF": ["nerf", "neural radiance", "neural radiance field"],
-    "世界模型": ["world model", "world-model", "worldmodel"],
-    "视频生成": ["video generation", "video synthesis", "video model"],
-    "物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method"],
+    "3DGS": ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian"],
+    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model"],
+    "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method"],
     "具身智能": ["embodied ai", "embodied intelligence", "robot", "robotics"],
-    "大模型": ["llm", "large language model", "foundation model"],
-    "多模态": ["multimodal", "vision-language", "vlm"],
+    "多模态": ["llm", "large language model", "foundation model", "multimodal", "vision-language", "vlm"],
     "扩散模型": ["diffusion model", "diffusion 3d", "generative ai", "生成式ai"],
-    "3D重建": ["3d reconstruction", "scene reconstruction"],
-    "3D生成": ["3d generation", "3d gen"],
-    "实时渲染": ["real-time", "realtime", "real-time rendering"],
-    "场景理解": ["scene understanding"],
+    "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "3d render"],
     "VR/AR": ["virtual reality", "augmented reality", "vr ", " ar ", "mixed reality"],
-    "可重光照": ["relighting", "relightable", "lighting editing", "光照编辑"],
-    "逆渲染": ["inverse rendering", "inverse render"],
-    "人体/角色": ["human avatar", "character animation", "3d human", "digital human", "人体建模", "角色动画"],
+    "可重光照/逆渲染": ["relighting", "relightable", "lighting editing", "光照编辑", "inverse rendering", "inverse render"],
+    "3D人体/角色": ["human avatar", "character animation", "3d human", "digital human", "人体建模", "角色动画"],
     "3DGS编辑": ["gaussian splatting edit", "3dgs edit", "splat editing"],
-    "水下建模": ["underwater", "水下", "underwater 3d"],
+    "3DGS水下建模": ["underwater", "水下", "underwater 3d"],
 }
 
 # 社区/公司通用关键词
 POST_TAG_KEYWORDS: dict[str, list[str]] = {
-    "3DGS": ["3d gaussian", "3dgs", "gaussian splatting"],
-    "4DGS": ["4d gaussian", "4dgs", "4d gaussian splatting"],
-    "NeRF": ["nerf", "neural radiance"],
-    "世界模型": ["world model"],
-    "视频生成": ["video generation", "video synthesis", "gen-3", "sora", "runway", "pika"],
-    "物理仿真": ["physics simulation", "physical simulation", "mpm", "material point method"],
+    "3DGS": ["3d gaussian", "3dgs", "gaussian splatting", "4d gaussian", "4dgs", "4d gaussian splatting"],
+    "视频/世界模型": ["world model", "video generation", "video synthesis", "gen-3", "sora", "runway", "pika"],
+    "3DGS物理仿真": ["physics simulation", "physical simulation", "mpm", "material point method"],
     "具身智能": ["embodied", "robot", "robotics", "figure"],
-    "大模型": ["llm", "大模型", "gpt", "claude", "通义", "豆包", "glm"],
+    "多模态": ["llm", "大模型", "gpt", "claude", "通义", "豆包", "glm", "multimodal", "vision-language", "vlm"],
     "扩散模型": ["diffusion", "扩散模型", "stable diffusion"],
-    "3D生成": ["3d generation", "3d gen", "tripo", "meshy", "luma", "wonder3d"],
+    "3D重建/生成/渲染": ["3d generation", "3d gen", "3d reconstruction", "3d rendering", "tripo", "meshy", "luma", "wonder3d"],
     "VR/AR": ["vr", "ar", "virtual reality", "augmented reality"],
-    "可重光照": ["relighting", "relightable", "光照编辑"],
-    "逆渲染": ["inverse rendering"],
-    "人体/角色": ["avatar", "digital human", "character animation", "人体", "角色"],
+    "可重光照/逆渲染": ["relighting", "relightable", "光照编辑", "inverse rendering"],
+    "3D人体/角色": ["avatar", "digital human", "character animation", "人体", "角色"],
     "3DGS编辑": ["gaussian splatting edit", "3dgs edit"],
+    "3DGS水下建模": ["underwater", "水下", "underwater 3d"],
 }
 
 # 会议标签：仅在 categories/venue 中匹配（避免 abstract 中提及会议误标）
@@ -60,10 +49,10 @@ BUSINESS_TAGS = frozenset(PAPER_TAG_KEYWORDS.keys()) | frozenset(CONFERENCE_TAG_
 
 # 公司方向 -> 展示标签
 COMPANY_DIRECTION_LABELS: dict[str, str] = {
-    "3d_gen": "3D生成",
+    "3d_gen": "3D重建/生成/渲染",
     "video_world": "视频/世界模型",
     "3d_design": "3D设计",
-    "llm": "大模型",
+    "llm": "多模态",
     "embodied": "具身智能",
 }
 

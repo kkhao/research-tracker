@@ -583,20 +583,17 @@ export default function Home() {
                 >
                   <option value="">全部领域</option>
                   <option value="3DGS">3DGS</option>
-                  <option value="4DGS">4DGS</option>
-                  <option value="NeRF">NeRF</option>
-                  <option value="世界模型">世界模型</option>
-                  <option value="视频生成">视频生成</option>
-                  <option value="物理仿真">物理仿真</option>
+                  <option value="视频/世界模型">视频/世界模型</option>
+                  <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="大模型">大模型</option>
+                  <option value="多模态">多模态</option>
                   <option value="扩散模型">扩散模型</option>
-                  <option value="3D生成">3D生成</option>
+                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
-                  <option value="可重光照">可重光照</option>
-                  <option value="逆渲染">逆渲染</option>
-                  <option value="人体/角色">人体/角色</option>
+                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
+                  <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
+                  <option value="3DGS水下建模">3DGS水下建模</option>
                 </select>
                 <select
                   value={postFilters.tag}
@@ -607,20 +604,17 @@ export default function Home() {
                 >
                   <option value="">全部标签</option>
                   <option value="3DGS">3DGS</option>
-                  <option value="4DGS">4DGS</option>
-                  <option value="NeRF">NeRF</option>
-                  <option value="世界模型">世界模型</option>
-                  <option value="视频生成">视频生成</option>
-                  <option value="物理仿真">物理仿真</option>
+                  <option value="视频/世界模型">视频/世界模型</option>
+                  <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="大模型">大模型</option>
+                  <option value="多模态">多模态</option>
                   <option value="扩散模型">扩散模型</option>
-                  <option value="3D生成">3D生成</option>
+                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
-                  <option value="可重光照">可重光照</option>
-                  <option value="逆渲染">逆渲染</option>
-                  <option value="人体/角色">人体/角色</option>
+                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
+                  <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
+                  <option value="3DGS水下建模">3DGS水下建模</option>
                   <option value="HN">HN</option>
                   <option value="GitHub">GitHub</option>
                   <option value="Reddit">Reddit</option>
@@ -685,10 +679,10 @@ export default function Home() {
                   className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                 >
                   <option value="">全部方向</option>
-                  <option value="3d_gen">3D生成</option>
+                  <option value="3d_gen">3D重建/生成/渲染</option>
                   <option value="video_world">视频/世界模型</option>
                   <option value="3d_design">3D设计</option>
-                  <option value="llm">大模型</option>
+                  <option value="llm">多模态</option>
                   <option value="embodied">具身智能</option>
                 </select>
                 <select
@@ -701,22 +695,18 @@ export default function Home() {
                   <option value="">全部标签</option>
                   <option value="微信公众号">微信公众号</option>
                   <option value="3DGS">3DGS</option>
-                  <option value="4DGS">4DGS</option>
-                  <option value="NeRF">NeRF</option>
-                  <option value="世界模型">世界模型</option>
-                  <option value="视频生成">视频生成</option>
-                  <option value="物理仿真">物理仿真</option>
-                  <option value="具身智能">具身智能</option>
-                  <option value="大模型">大模型</option>
-                  <option value="扩散模型">扩散模型</option>
-                  <option value="3D生成">3D生成</option>
                   <option value="视频/世界模型">视频/世界模型</option>
+                  <option value="3DGS物理仿真">3DGS物理仿真</option>
+                  <option value="具身智能">具身智能</option>
+                  <option value="多模态">多模态</option>
+                  <option value="扩散模型">扩散模型</option>
+                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="3D设计">3D设计</option>
                   <option value="VR/AR">VR/AR</option>
-                  <option value="可重光照">可重光照</option>
-                  <option value="逆渲染">逆渲染</option>
-                  <option value="人体/角色">人体/角色</option>
+                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
+                  <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
+                  <option value="3DGS水下建模">3DGS水下建模</option>
                 </select>
                 <select
                   value={companyFilters.company}
