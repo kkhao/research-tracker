@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import PaperCard from "@/components/PaperCard";
 import PostCard, { type Post } from "@/components/PostCard";
 import Filters from "@/components/Filters";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -112,23 +113,30 @@ export default function Home() {
     min_citations: "",
   });
 
-  const fetchPapers = async () => {
+  const debouncedSearch = useDebounce(filters.search, 300);
+  const debouncedAuthor = useDebounce(filters.author, 300);
+  const debouncedAffiliation = useDebounce(filters.affiliation, 300);
+  const debouncedKeyword = useDebounce(filters.keyword, 300);
+  const debouncedPostSearch = useDebounce(postFilters.search, 300);
+  const debouncedCompanySearch = useDebounce(companyFilters.search, 300);
+
+  const fetchPapers = async (effective: typeof filters) => {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (filters.category) params.set("category", filters.category);
-      if (filters.search) params.set("search", filters.search);
-      if (!filters.from_date && !filters.to_date) {
-        params.set("days", String(filters.days));
+      if (effective.category) params.set("category", effective.category);
+      if (effective.search) params.set("search", effective.search);
+      if (!effective.from_date && !effective.to_date) {
+        params.set("days", String(effective.days));
       }
-      if (filters.source) params.set("source", filters.source);
-      if (filters.author) params.set("author", filters.author);
-      if (filters.affiliation) params.set("affiliation", filters.affiliation);
-      if (filters.keyword) params.set("keyword", filters.keyword);
-      if (filters.tag) params.set("tag", filters.tag);
-      if (filters.from_date) params.set("from_date", filters.from_date);
-      if (filters.to_date) params.set("to_date", filters.to_date);
-      if (filters.min_citations) params.set("min_citations", filters.min_citations);
+      if (effective.source) params.set("source", effective.source);
+      if (effective.author) params.set("author", effective.author);
+      if (effective.affiliation) params.set("affiliation", effective.affiliation);
+      if (effective.keyword) params.set("keyword", effective.keyword);
+      if (effective.tag) params.set("tag", effective.tag);
+      if (effective.from_date) params.set("from_date", effective.from_date);
+      if (effective.to_date) params.set("to_date", effective.to_date);
+      if (effective.min_citations) params.set("min_citations", effective.min_citations);
       params.set("limit", "150");
 
       const res = await fetch(`${API_BASE}/api/papers?${params}`);
@@ -148,20 +156,26 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchPapers();
+    fetchPapers({
+      ...filters,
+      search: debouncedSearch,
+      author: debouncedAuthor,
+      affiliation: debouncedAffiliation,
+      keyword: debouncedKeyword,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     filters.category,
-    filters.search,
     filters.days,
     filters.source,
-    filters.author,
-    filters.affiliation,
-    filters.keyword,
     filters.tag,
     filters.from_date,
     filters.to_date,
     filters.min_citations,
+    debouncedSearch,
+    debouncedAuthor,
+    debouncedAffiliation,
+    debouncedKeyword,
   ]);
 
   const fetchNotifications = async () => {
@@ -202,7 +216,7 @@ export default function Home() {
     try {
       const params = new URLSearchParams();
       if (postFilters.source) params.set("source", postFilters.source);
-      if (postFilters.search) params.set("search", postFilters.search);
+      if (debouncedPostSearch) params.set("search", debouncedPostSearch);
       if (postFilters.domain) params.set("domain", postFilters.domain);
       if (postFilters.tag) params.set("tag", postFilters.tag);
       params.set("days", String(postFilters.days));
@@ -233,7 +247,7 @@ export default function Home() {
       params.set("source", "company");
       if (companyFilters.direction) params.set("direction", companyFilters.direction);
       if (companyFilters.company) params.set("company", companyFilters.company);
-      if (companyFilters.search) params.set("search", companyFilters.search);
+      if (debouncedCompanySearch) params.set("search", debouncedCompanySearch);
       if (companyFilters.tag) params.set("tag", companyFilters.tag);
       params.set("days", String(companyFilters.days));
       params.set("limit", "150");
@@ -262,13 +276,13 @@ export default function Home() {
   }, [
     activeTab,
     postFilters.source,
-    postFilters.search,
+    debouncedPostSearch,
     postFilters.domain,
     postFilters.tag,
     postFilters.days,
     companyFilters.direction,
     companyFilters.company,
-    companyFilters.search,
+    debouncedCompanySearch,
     companyFilters.tag,
     companyFilters.days,
   ]);
@@ -343,7 +357,13 @@ export default function Home() {
       clearTimeout(timeoutId);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.status === "ok") {
-        await fetchPapers();
+        await fetchPapers({
+          ...filters,
+          search: debouncedSearch,
+          author: debouncedAuthor,
+          affiliation: debouncedAffiliation,
+          keyword: debouncedKeyword,
+        });
         await fetchNotifications();
       } else {
         setError(res.ok ? "抓取失败，请稍后重试" : `请求失败: ${res.status}`);
@@ -814,7 +834,13 @@ export default function Home() {
                       const data = await res.json();
                       if (res.ok) {
                         alert(`已补全 ${data.papers_updated} 篇论文的标签`);
-                        fetchPapers();
+                        fetchPapers({
+                          ...filters,
+                          search: debouncedSearch,
+                          author: debouncedAuthor,
+                          affiliation: debouncedAffiliation,
+                          keyword: debouncedKeyword,
+                        });
                       }
                     } catch (e) {
                       alert("补全失败");
@@ -1051,7 +1077,16 @@ export default function Home() {
                   测试后端健康检查 →
                 </a>
                 <button
-                  onClick={() => { setLoading(true); fetchPapers(); }}
+                  onClick={() => {
+                    setLoading(true);
+                    fetchPapers({
+                      ...filters,
+                      search: debouncedSearch,
+                      author: debouncedAuthor,
+                      affiliation: debouncedAffiliation,
+                      keyword: debouncedKeyword,
+                    });
+                  }}
                   className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm hover:bg-[var(--accent-hover)]"
                 >
                   重试

@@ -1,5 +1,6 @@
 """FastAPI backend for research paper tracker."""
 from pathlib import Path
+from time import time
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -157,6 +158,7 @@ def list_papers(
 def refresh_papers(days: int = Query(7, ge=1, le=30)):
     """Trigger crawl to fetch new papers from arXiv."""
     count, notifications = fetch_and_store(days=days)
+    _invalidate_tags_cache()
     return {"status": "ok", "papers_added": count, "notifications_added": notifications}
 
 
@@ -164,6 +166,7 @@ def refresh_papers(days: int = Query(7, ge=1, le=30)):
 def backfill_tags(force: bool = Query(False, description="If true, re-tag all papers")):
     """Manually backfill tags. Use if tag filter returns empty."""
     n = backfill_paper_tags(force=force)
+    _invalidate_tags_cache()
     return {"status": "ok", "papers_updated": n}
 
 
@@ -253,6 +256,7 @@ def list_posts(
 def refresh_posts(days: int = Query(7, ge=1, le=30)):
     """Trigger crawl to fetch community posts."""
     count = fetch_and_store_posts(days=days)
+    _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count}
 
 
@@ -260,12 +264,27 @@ def refresh_posts(days: int = Query(7, ge=1, le=30)):
 def refresh_company_posts():
     """Trigger crawl to fetch company product updates."""
     count, errors = fetch_and_store_company_posts()
+    _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count, "errors": errors}
+
+
+_TAGS_CACHE: list[str] | None = None
+_TAGS_CACHE_AT: float = 0
+_TAGS_CACHE_TTL = 300  # 5 minutes
+
+
+def _invalidate_tags_cache():
+    global _TAGS_CACHE
+    _TAGS_CACHE = None
 
 
 @app.get("/api/tags")
 def list_tags():
-    """Get all unique tags from papers and posts for filter dropdown."""
+    """Get all unique tags from papers and posts for filter dropdown. Cached 5 min."""
+    global _TAGS_CACHE, _TAGS_CACHE_AT
+    now = time()
+    if _TAGS_CACHE is not None and (now - _TAGS_CACHE_AT) < _TAGS_CACHE_TTL:
+        return _TAGS_CACHE
     conn = get_connection()
     cursor = conn.cursor()
     tags = set()
@@ -280,7 +299,10 @@ def list_tags():
             if t.strip():
                 tags.add(t.strip())
     conn.close()
-    return sorted(tags)
+    result = sorted(tags)
+    _TAGS_CACHE = result
+    _TAGS_CACHE_AT = now
+    return result
 
 
 @app.get("/api/company-config")

@@ -65,6 +65,10 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_papers_source 
         ON papers(source)
     """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_papers_pub_source 
+        ON papers(published_at DESC, source)
+    """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS subscriptions (
@@ -135,6 +139,10 @@ def init_db():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_posts_created 
         ON posts(created_at DESC)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_posts_source_created 
+        ON posts(source, created_at DESC)
     """)
     conn.commit()
     conn.close()

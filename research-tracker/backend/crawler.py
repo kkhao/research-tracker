@@ -10,14 +10,29 @@ from tagging import tag_paper, tags_to_str, BUSINESS_TAGS, PAPER_TAG_KEYWORDS
 
 ARXIV_API = "http://export.arxiv.org/api/query"
 
-# arXiv 按关键词搜索：从 PAPER_TAG_KEYWORDS 展平，用于替代按分类抓取
-ARXIV_SEARCH_KEYWORDS = []
-for kws in PAPER_TAG_KEYWORDS.values():
-    for kw in kws:
-        k = kw.strip()
-        if len(k) >= 3 and k not in ARXIV_SEARCH_KEYWORDS:
-            ARXIV_SEARCH_KEYWORDS.append(k)
-ARXIV_SEARCH_KEYWORDS = ARXIV_SEARCH_KEYWORDS[:35]  # 限制数量，避免请求过多
+# arXiv 按关键词搜索：轮询取词，确保每个研究方向都有代表关键词参与抓取
+def _build_search_keywords(max_count: int = 60) -> list[str]:
+    """Round-robin: 每个标签轮流贡献关键词，保证各研究方向均衡覆盖。"""
+    keywords_by_tag = list(PAPER_TAG_KEYWORDS.items())
+    result = []
+    idx = 0
+    while len(result) < max_count:
+        added = False
+        for _tag, kws in keywords_by_tag:
+            if idx < len(kws):
+                k = kws[idx].strip()
+                if len(k) >= 3 and k not in result:
+                    result.append(k)
+                    added = True
+                    if len(result) >= max_count:
+                        break
+        if not added:
+            break
+        idx += 1
+    return result
+
+
+ARXIV_SEARCH_KEYWORDS = _build_search_keywords(60)
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO", "cs.CL", "cs.AI", "cs.MM", "eess.IV"]
 
@@ -119,7 +134,6 @@ def _build_arxiv_keyword_query(keywords: list[str], batch_size: int = 6) -> list
         terms = []
         for kw in batch:
             if " " in kw:
-                # 短语用引号，空格编码为 +
                 terms.append(f'all:"{kw.replace(" ", "+")}"')
             else:
                 terms.append(f"all:{kw}")
@@ -128,36 +142,47 @@ def _build_arxiv_keyword_query(keywords: list[str], batch_size: int = 6) -> list
     return queries
 
 
-def fetch_recent_papers(days: int = 7, max_results: int = 200) -> list[dict]:
-    """Fetch recent papers from arXiv API by keyword search (与标签关键词对齐)."""
+def _build_tag_query(keywords: list[str]) -> str:
+    """Build single arXiv query from a tag's keywords (OR)."""
+    cat_part = "+OR+".join(f"cat:{c}" for c in ARXIV_CATEGORIES)
+    terms = []
+    for kw in keywords:
+        k = kw.strip()
+        if len(k) < 3:
+            continue
+        if " " in k:
+            terms.append(f'all:"{k.replace(" ", "+")}"')
+        else:
+            terms.append(f"all:{k}")
+    if not terms:
+        return ""
+    kw_part = "+OR+".join(terms)
+    return f"({kw_part})+AND+({cat_part})"
+
+
+def fetch_recent_papers(days: int = 7, max_results: int = 500, min_per_tag: int = 10) -> list[dict]:
+    """按标签抓取，保证每个研究方向至少 min_per_tag 篇。"""
     papers = []
     seen_ids = set()
 
-    if not ARXIV_SEARCH_KEYWORDS:
-        # 无关键词时回退到按分类抓取
-        keyword_queries = [f"cat:{c}" for c in ARXIV_CATEGORIES]
-        per_query = max(max_results // len(ARXIV_CATEGORIES), 15)
-        use_date_filter = False
-    else:
-        keyword_queries = _build_arxiv_keyword_query(ARXIV_SEARCH_KEYWORDS)
-        per_query = max(max_results // len(keyword_queries), 25)
-        use_date_filter = True
-
-    # 日期范围过滤（arXiv submittedDate 格式：YYYYMMDDHHMM）
     end_dt = datetime.now(timezone.utc)
     start_dt = end_dt - timedelta(days=days)
     date_range = f"submittedDate:[{start_dt:%Y%m%d%H%M}+TO+{end_dt:%Y%m%d%H%M}]"
 
-    for q in keyword_queries:
-        if len(papers) >= max_results:
-            break
-        search_query = f"({q})+AND+{date_range}" if use_date_filter else q
+    for tag, kws in PAPER_TAG_KEYWORDS.items():
+        valid_kws = [k for k in kws if len(k.strip()) >= 3]
+        if not valid_kws:
+            continue
+        query = _build_tag_query(valid_kws)
+        if not query:
+            continue
+        search_query = f"({query})+AND+{date_range}"
         params = {
             "search_query": search_query,
             "sortBy": "submittedDate",
             "sortOrder": "descending",
             "start": 0,
-            "max_results": min(per_query, max_results - len(papers)),
+            "max_results": min_per_tag,
         }
         try:
             r = requests.get(ARXIV_API, params=params, timeout=30)
@@ -361,6 +386,9 @@ def fetch_semantic_scholar_papers(days: int = 7, max_results: int = 200) -> list
     queries = load_crawl_keywords("papers")
     if not queries:
         queries = _load_s2_queries()
+    if not queries:
+        # 与 arXiv 统一：无自定义配置时使用相同关键词
+        queries = ARXIV_SEARCH_KEYWORDS
     if not queries:
         queries = S2_DEFAULT_QUERIES
 
