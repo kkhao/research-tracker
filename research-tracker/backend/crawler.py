@@ -1,8 +1,10 @@
 """arXiv paper crawler - uses arXiv REST API (no arxiv/feedparser, Python 3.13+ compatible)."""
 import urllib.parse
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import sqlite3
+import threading
 import requests
 
 from database import get_connection, init_db, load_crawl_keywords
@@ -160,15 +162,75 @@ def _build_tag_query(keywords: list[str]) -> str:
     return f"({kw_part})+AND+({cat_part})"
 
 
+def _fetch_tag_papers(
+    tag: str,
+    search_query: str,
+    max_per_tag: int,
+    papers: list,
+    seen_ids: set,
+    lock: threading.Lock,
+    page_size: int = 25,
+    max_pages: int = 10,
+) -> None:
+    """单标签抓取（供并行调用）。"""
+    tag_count = 0
+    arxiv_start = 0
+    for _ in range(max_pages):
+        if tag_count >= max_per_tag:
+            break
+        params = {
+            "search_query": search_query,
+            "sortBy": "submittedDate",
+            "sortOrder": "descending",
+            "start": arxiv_start,
+            "max_results": page_size,
+        }
+        try:
+            r = requests.get(ARXIV_API, params=params, timeout=20)
+            r.raise_for_status()
+            root = ET.fromstring(r.content)
+        except Exception:
+            break
+        entries = root.findall("atom:entry", ARXIV_NS)
+        if not entries:
+            break
+        for entry in entries:
+            p = _parse_entry(entry)
+            if not p:
+                continue
+            with lock:
+                if p["id"] in seen_ids:
+                    continue
+                seen_ids.add(p["id"])
+                papers.append(p)
+            tags_list = tag_paper(
+                p.get("title", ""),
+                p.get("abstract", ""),
+                p.get("categories", ""),
+                p.get("keywords", ""),
+                p.get("source", ""),
+                p.get("venue", ""),
+            )
+            if tag in tags_list:
+                tag_count += 1
+                if tag_count >= max_per_tag:
+                    break
+        arxiv_start += len(entries)
+        if len(entries) < page_size:
+            break
+
+
 def fetch_recent_papers(days: int = 14, max_results: int = 500, min_per_tag: int = 10, max_per_tag: int = 20) -> list[dict]:
-    """按标签抓取，每标签 min_per_tag～max_per_tag 篇（打标后计数，不足则分页补抓）。"""
+    """按标签并行抓取，每标签 min_per_tag～max_per_tag 篇。"""
     papers = []
     seen_ids = set()
+    lock = threading.Lock()
 
     end_dt = datetime.now(timezone.utc)
     start_dt = end_dt - timedelta(days=days)
     date_range = f"submittedDate:[{start_dt:%Y%m%d%H%M}+TO+{end_dt:%Y%m%d%H%M}]"
 
+    tasks = []
     for tag, kws in PAPER_TAG_KEYWORDS.items():
         valid_kws = [k for k in kws if len(k.strip()) >= 3]
         if not valid_kws:
@@ -177,52 +239,26 @@ def fetch_recent_papers(days: int = 14, max_results: int = 500, min_per_tag: int
         if not query:
             continue
         search_query = f"({query})+AND+{date_range}"
-        tag_count = 0
-        arxiv_start = 0
-        page_size = 15  # 每页请求数
-        max_pages = 12  # 每标签最多翻页次数
+        tasks.append((tag, search_query))
 
-        while tag_count < max_per_tag and (arxiv_start // page_size) < max_pages:
-            params = {
-                "search_query": search_query,
-                "sortBy": "submittedDate",
-                "sortOrder": "descending",
-                "start": arxiv_start,
-                "max_results": page_size,
-            }
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {
+            executor.submit(
+                _fetch_tag_papers,
+                tag,
+                search_query,
+                max_per_tag,
+                papers,
+                seen_ids,
+                lock,
+            ): tag
+            for tag, search_query in tasks
+        }
+        for future in as_completed(futures):
             try:
-                r = requests.get(ARXIV_API, params=params, timeout=30)
-                r.raise_for_status()
-                root = ET.fromstring(r.content)
+                future.result()
             except Exception:
-                break
-
-            entries = root.findall("atom:entry", ARXIV_NS)
-            if not entries:
-                break
-
-            for entry in entries:
-                p = _parse_entry(entry)
-                if not p or p["id"] in seen_ids:
-                    continue
-                seen_ids.add(p["id"])
-                papers.append(p)
-                tags_list = tag_paper(
-                    p.get("title", ""),
-                    p.get("abstract", ""),
-                    p.get("categories", ""),
-                    p.get("keywords", ""),
-                    p.get("source", ""),
-                    p.get("venue", ""),
-                )
-                if tag in tags_list:
-                    tag_count += 1
-                    if tag_count >= max_per_tag:
-                        break
-
-            arxiv_start += len(entries)
-            if len(entries) < page_size:
-                break
+                pass
 
     papers.sort(key=lambda x: x["published_at"] or "", reverse=True)
     return papers[:max_results]

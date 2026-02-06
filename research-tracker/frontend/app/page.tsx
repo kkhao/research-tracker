@@ -348,7 +348,7 @@ export default function Home() {
     setRefreshing(true);
     setError(null);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 分钟超时
+    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 分钟超时（按标签分页抓取较耗时）
     try {
       const res = await fetch(`${API_BASE}/api/refresh?days=7`, {
         method: "POST",
@@ -372,7 +372,7 @@ export default function Home() {
       clearTimeout(timeoutId);
       if (e instanceof Error) {
         if (e.name === "AbortError") {
-          setError("抓取超时（超过 2 分钟）。arXiv 可能较慢，请检查网络或稍后重试");
+          setError("抓取超时（超过 10 分钟）。arXiv 可能较慢，请检查网络或稍后重试");
         } else {
           setError(`无法连接后端 (${API_BASE})`);
         }
