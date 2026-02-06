@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_post, tags_to_str
+from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS
 from crawler import ARXIV_SEARCH_KEYWORDS
 
 GITHUB_API = "https://api.github.com/search/repositories"
@@ -120,9 +120,10 @@ def _normalize_url(url: str) -> str:
         return url
 
 
-def fetch_and_store_code_posts(days: int | None = None) -> int:
+def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) -> int:
     """Fetch GitHub and Hugging Face posts and store in DB.
     days: only fetch items created in last N days (30/90). None = no filter (all).
+    tag: when set, only use keywords for this tag (from POST_TAG_KEYWORDS). Enables 选定标签->选定时间 抓取.
     """
     init_db()
     all_posts = []
@@ -147,11 +148,15 @@ def fetch_and_store_code_posts(days: int | None = None) -> int:
             seen_urls.add(norm_url)
         all_posts.append(p)
 
-    keywords = load_crawl_keywords("community")
-    if not keywords:
-        keywords = ARXIV_SEARCH_KEYWORDS
-    if not keywords:
-        keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
+    # 选定标签：仅用该标签对应的关键词抓取
+    if tag and tag.strip() and tag.strip() in POST_TAG_KEYWORDS:
+        keywords = [k for k in POST_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
+    else:
+        keywords = load_crawl_keywords("community")
+        if not keywords:
+            keywords = ARXIV_SEARCH_KEYWORDS
+        if not keywords:
+            keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
 
     for kw in [k.lower() for k in keywords]:
         for p in _fetch_github(kw, max_results=CODE_PER_KEYWORD, created_since=created_since):
