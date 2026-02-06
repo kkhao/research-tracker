@@ -155,7 +155,7 @@ def list_papers(
 
 
 @app.post("/api/refresh")
-def refresh_papers(days: int = Query(7, ge=1, le=30)):
+def refresh_papers(days: int = Query(14, ge=1, le=30)):
     """Trigger crawl to fetch new papers from arXiv."""
     count, notifications = fetch_and_store(days=days)
     _invalidate_tags_cache()

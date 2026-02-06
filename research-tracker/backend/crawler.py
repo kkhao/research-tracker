@@ -160,8 +160,8 @@ def _build_tag_query(keywords: list[str]) -> str:
     return f"({kw_part})+AND+({cat_part})"
 
 
-def fetch_recent_papers(days: int = 7, max_results: int = 500, min_per_tag: int = 10) -> list[dict]:
-    """按标签抓取，保证每个研究方向至少 min_per_tag 篇。"""
+def fetch_recent_papers(days: int = 14, max_results: int = 500, min_per_tag: int = 10, max_per_tag: int = 20) -> list[dict]:
+    """按标签抓取，每标签 min_per_tag～max_per_tag 篇（打标后计数，不足则分页补抓）。"""
     papers = []
     seen_ids = set()
 
@@ -177,26 +177,52 @@ def fetch_recent_papers(days: int = 7, max_results: int = 500, min_per_tag: int 
         if not query:
             continue
         search_query = f"({query})+AND+{date_range}"
-        params = {
-            "search_query": search_query,
-            "sortBy": "submittedDate",
-            "sortOrder": "descending",
-            "start": 0,
-            "max_results": min_per_tag,
-        }
-        try:
-            r = requests.get(ARXIV_API, params=params, timeout=30)
-            r.raise_for_status()
-            root = ET.fromstring(r.content)
-        except Exception:
-            continue
+        tag_count = 0
+        arxiv_start = 0
+        page_size = 15  # 每页请求数
+        max_pages = 12  # 每标签最多翻页次数
 
-        for entry in root.findall("atom:entry", ARXIV_NS):
-            p = _parse_entry(entry)
-            if not p or p["id"] in seen_ids:
-                continue
-            seen_ids.add(p["id"])
-            papers.append(p)
+        while tag_count < max_per_tag and (arxiv_start // page_size) < max_pages:
+            params = {
+                "search_query": search_query,
+                "sortBy": "submittedDate",
+                "sortOrder": "descending",
+                "start": arxiv_start,
+                "max_results": page_size,
+            }
+            try:
+                r = requests.get(ARXIV_API, params=params, timeout=30)
+                r.raise_for_status()
+                root = ET.fromstring(r.content)
+            except Exception:
+                break
+
+            entries = root.findall("atom:entry", ARXIV_NS)
+            if not entries:
+                break
+
+            for entry in entries:
+                p = _parse_entry(entry)
+                if not p or p["id"] in seen_ids:
+                    continue
+                seen_ids.add(p["id"])
+                papers.append(p)
+                tags_list = tag_paper(
+                    p.get("title", ""),
+                    p.get("abstract", ""),
+                    p.get("categories", ""),
+                    p.get("keywords", ""),
+                    p.get("source", ""),
+                    p.get("venue", ""),
+                )
+                if tag in tags_list:
+                    tag_count += 1
+                    if tag_count >= max_per_tag:
+                        break
+
+            arxiv_start += len(entries)
+            if len(entries) < page_size:
+                break
 
     papers.sort(key=lambda x: x["published_at"] or "", reverse=True)
     return papers[:max_results]
@@ -509,7 +535,7 @@ def _matches_subscription(paper: dict, sub) -> bool:
     return False
 
 
-def fetch_and_store(days: int = 7):
+def fetch_and_store(days: int = 14):
     """Fetch papers and store in database."""
     init_db()
     papers = fetch_recent_papers(days=days)
