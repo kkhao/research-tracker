@@ -221,8 +221,14 @@ def _fetch_tag_papers(
             break
 
 
-def fetch_recent_papers(days: int = 14, max_results: int = 500, min_per_tag: int = 10, max_per_tag: int = 20) -> list[dict]:
-    """按标签并行抓取，每标签 min_per_tag～max_per_tag 篇。"""
+def fetch_recent_papers(
+    days: int = 14,
+    max_results: int = 500,
+    min_per_tag: int = 10,
+    max_per_tag: int = 20,
+    tag: str | None = None,
+) -> list[dict]:
+    """按标签并行抓取，每标签 min_per_tag～max_per_tag 篇。tag: 选定标签时仅抓取该标签关键词（PAPER_TAG_KEYWORDS）。"""
     papers = []
     seen_ids = set()
     lock = threading.Lock()
@@ -231,8 +237,14 @@ def fetch_recent_papers(days: int = 14, max_results: int = 500, min_per_tag: int
     start_dt = end_dt - timedelta(days=days)
     date_range = f"submittedDate:[{start_dt:%Y%m%d%H%M}+TO+{end_dt:%Y%m%d%H%M}]"
 
+    tags_to_fetch = (
+        [(tag.strip(), PAPER_TAG_KEYWORDS[tag.strip()])]
+        if tag and tag.strip() and tag.strip() in PAPER_TAG_KEYWORDS
+        else list(PAPER_TAG_KEYWORDS.items())
+    )
+
     tasks = []
-    for tag, kws in PAPER_TAG_KEYWORDS.items():
+    for t, kws in tags_to_fetch:
         valid_kws = [k for k in kws if len(k.strip()) >= 3]
         if not valid_kws:
             continue
@@ -240,20 +252,20 @@ def fetch_recent_papers(days: int = 14, max_results: int = 500, min_per_tag: int
         if not query:
             continue
         search_query = f"({query})+AND+{date_range}"
-        tasks.append((tag, search_query))
+        tasks.append((t, search_query))
 
     with ThreadPoolExecutor(max_workers=6) as executor:
         futures = {
             executor.submit(
                 _fetch_tag_papers,
-                tag,
+                t,
                 search_query,
                 max_per_tag,
                 papers,
                 seen_ids,
                 lock,
-            ): tag
-            for tag, search_query in tasks
+            ): t
+            for t, search_query in tasks
         }
         for future in as_completed(futures):
             try:
@@ -658,10 +670,10 @@ def _matches_subscription(paper: dict, sub) -> bool:
     return False
 
 
-def fetch_and_store(days: int = 14):
-    """Fetch papers and store in database."""
+def fetch_and_store(days: int = 14, tag: str | None = None):
+    """Fetch papers and store in database. tag: 选定标签时仅 arXiv 按该标签关键词抓取。"""
     init_db()
-    papers = fetch_recent_papers(days=days)
+    papers = fetch_recent_papers(days=days, tag=tag)
     papers += fetch_openreview_papers(days=days)
     papers += fetch_semantic_scholar_papers(days=days)
 

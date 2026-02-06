@@ -429,7 +429,10 @@ export default function Home() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 分钟超时（按标签分页抓取较耗时）
     try {
-      const res = await fetch(`${API_BASE}/api/refresh?days=14`, {
+      const params = new URLSearchParams();
+      params.set("days", String(filters.days));
+      if (filters.tag) params.set("tag", filters.tag);
+      const res = await fetch(`${API_BASE}/api/refresh?${params}`, {
         method: "POST",
         signal: controller.signal,
       });

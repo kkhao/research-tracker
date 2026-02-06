@@ -4,6 +4,7 @@
 
 ### 新增
 
+- **论文**支持按**标签**抓取：选定标签时，仅用该标签对应关键词抓取 arXiv（OpenReview、S2 仍抓全部）
 - 社区动态支持按**标签**抓取：选定标签时，仅用该标签对应关键词抓取 HN、YouTube（Reddit 无关键词搜索，按标签时跳过）
 - 社区动态支持按**来源**抓取：选定来源（hn/reddit/youtube）时，仅抓取对应平台
 
@@ -14,6 +15,7 @@
 
 ### API
 
+- `POST /api/refresh` 新增 Query 参数：`tag`（选定标签时仅抓取该标签 arXiv）
 - `POST /api/refresh-posts` 新增 Query 参数：`tag`、`source`
 
 ---

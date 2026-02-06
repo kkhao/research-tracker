@@ -161,9 +161,12 @@ def list_papers(
 
 
 @app.post("/api/refresh")
-def refresh_papers(days: int = Query(14, ge=1, le=30)):
-    """Trigger crawl to fetch new papers from arXiv."""
-    count, notifications = fetch_and_store(days=days)
+def refresh_papers(
+    days: int = Query(14, ge=1, le=30),
+    tag: str | None = Query(None, description="Only fetch arXiv papers for this tag (3DGS, 视频/世界模型, etc.). Omit for all."),
+):
+    """Trigger crawl to fetch new papers from arXiv. Supports tag filter for 选定标签->抓取."""
+    count, notifications = fetch_and_store(days=days, tag=tag)
     _invalidate_tags_cache()
     return {"status": "ok", "papers_added": count, "notifications_added": notifications}
 
@@ -279,7 +282,7 @@ def refresh_posts(
         src = source.strip().lower()
         if src == "youtube":
             if not os.environ.get("YOUTUBE_API_KEY"):
-                hint = "YouTube 抓取需设置 YOUTUBE_API_KEY 环境变量，请在 backend/.env 中配置（获取：https://console.cloud.google.com/apis/credentials）"
+                hint = "YouTube 抓取需设置 YOUTUBE_API_KEY。本地：在 backend/.env 中配置；Railway：在 Service → Variables 中添加（获取：https://console.cloud.google.com/apis/credentials）"
             else:
                 hint = "YouTube 未返回数据。可能原因：① 403 权限/配额（请在 Google Cloud Console 启用 YouTube Data API v3 并检查配额）；② 网络限制（可设置 HTTPS_PROXY 代理）。查看后端控制台日志获取详细错误"
         elif src == "reddit":
