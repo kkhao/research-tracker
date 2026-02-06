@@ -263,17 +263,24 @@ def list_posts(
 
 
 @app.post("/api/refresh-posts")
-def refresh_posts(days: int = Query(90, ge=1, le=365)):
-    """Trigger crawl to fetch community posts (HN, Reddit, YouTube). Only last N days (default 90 = 3 months)."""
-    count = fetch_and_store_posts(days=days)
+def refresh_posts(
+    days: int = Query(7, ge=1, le=30),
+    tag: str | None = Query(None, description="Only use keywords for this tag (3DGS, 视频/世界模型, etc.). Omit for all."),
+    source: str | None = Query(None, description="Only fetch from this platform (hn/reddit/youtube). Omit for all."),
+):
+    """Trigger crawl to fetch community posts (HN, Reddit, YouTube). Supports tag, source, days filters."""
+    count = fetch_and_store_posts(days=days, tag=tag, source=source)
     _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count}
 
 
 @app.post("/api/refresh-code")
-def refresh_code_posts(days: int | None = Query(None, ge=1, le=365, description="Only fetch items created in last N days (30/90). Omit for all.")):
-    """Trigger crawl to fetch code posts (GitHub, Hugging Face)."""
-    count = fetch_and_store_code_posts(days=days)
+def refresh_code_posts(
+    days: int | None = Query(None, ge=1, le=365, description="Only fetch items created in last N days (30/90). Omit for all."),
+    tag: str | None = Query(None, description="Only use keywords for this tag (3DGS, 视频/世界模型, etc.). Omit for all."),
+):
+    """Trigger crawl to fetch code posts (GitHub, Hugging Face). Supports 选定标签->选定时间 抓取."""
+    count = fetch_and_store_code_posts(days=days, tag=tag)
     _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count}
 

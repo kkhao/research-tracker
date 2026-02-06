@@ -90,7 +90,7 @@ export default function Home() {
     search: "",
     domain: "",
     tag: "",
-    days: 365,
+    days: 7,
   });
   const [codeFilters, setCodeFilters] = useState({
     source: "",
@@ -346,8 +346,13 @@ export default function Home() {
     setPostsRefreshing(true);
     setPostsError(null);
     try {
-      const daysParam = codeFilters.days < 365 ? `?days=${codeFilters.days}` : "";
-      const res = await fetch(`${API_BASE}/api/refresh-code${daysParam}`, { method: "POST" });
+      const params = new URLSearchParams();
+      if (codeFilters.days < 365) params.set("days", String(codeFilters.days));
+      if (codeFilters.tag && !["GitHub", "Hugging Face"].includes(codeFilters.tag)) {
+        params.set("tag", codeFilters.tag);
+      }
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`${API_BASE}/api/refresh-code${qs}`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.status === "ok") {
         const fetched = await fetchCodePosts();
@@ -368,7 +373,11 @@ export default function Home() {
     setPostsRefreshing(true);
     setPostsError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/refresh-posts?days=90`, {
+      const params = new URLSearchParams();
+      params.set("days", String(postFilters.days));
+      if (postFilters.tag) params.set("tag", postFilters.tag);
+      if (postFilters.source) params.set("source", postFilters.source);
+      const res = await fetch(`${API_BASE}/api/refresh-posts?${params}`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));
@@ -829,9 +838,9 @@ export default function Home() {
                     }
                     className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                   >
-                    <option value={30}>近30天</option>
-                    <option value={90}>近90天</option>
-                    <option value={365}>全部</option>
+                    <option value={7}>近一周</option>
+                    <option value={14}>近两周</option>
+                    <option value={30}>近一个月</option>
                   </select>
                   <button
                     onClick={handleRefreshPosts}

@@ -4,7 +4,7 @@ from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from datetime import datetime, timedelta
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_post, tags_to_str
+from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS
 from crawler import ARXIV_SEARCH_KEYWORDS
 
 HN_API = "https://hn.algolia.com/api/v1/search"
@@ -165,8 +165,16 @@ def _normalize_url(url: str) -> str:
         return url
 
 
-def fetch_and_store_posts(days: int = 90) -> int:
-    """Fetch community posts and store in DB. Only items from last N days (default 90 = 3 months)."""
+def fetch_and_store_posts(
+    days: int = 7,
+    tag: str | None = None,
+    source: str | None = None,
+) -> int:
+    """Fetch community posts and store in DB.
+    days: last N days (7/14/30).
+    tag: when set (in POST_TAG_KEYWORDS), only use that tag's keywords for HN/YouTube. Reddit has no keyword search, skipped when tag is set.
+    source: when set (hn/reddit/youtube), only fetch from that platform.
+    """
     init_db()
     all_posts = []
     seen_ids = set()
@@ -186,23 +194,35 @@ def fetch_and_store_posts(days: int = 90) -> int:
             seen_urls.add(norm_url)
         all_posts.append(p)
 
-    keywords = load_crawl_keywords("community")
-    if not keywords:
-        keywords = ARXIV_SEARCH_KEYWORDS
-    if not keywords:
-        keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
-    # 使用全部关键词统一抓取，每关键词 10-20 条（COMMUNITY_PER_KEYWORD），仅近 N 天
-    for kw in keywords:
-        for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD, created_after_ts=cutoff_ts):
-            _add_post(p)
+    # 选定标签：仅用该标签对应的关键词（HN/YouTube）；Reddit 无关键词搜索，按标签时跳过
+    if tag and tag.strip() and tag.strip() in POST_TAG_KEYWORDS:
+        keywords = [k for k in POST_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
+    else:
+        keywords = load_crawl_keywords("community")
+        if not keywords:
+            keywords = ARXIV_SEARCH_KEYWORDS
+        if not keywords:
+            keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
 
-    for sub in REDDIT_SUBS:
-        for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts):
-            _add_post(p)
+    src = (source or "").strip().lower() if source else ""
+    fetch_hn = not src or src == "hn"
+    fetch_reddit = (not src or src == "reddit") and (not tag or not tag.strip() or tag.strip() not in POST_TAG_KEYWORDS)
+    fetch_youtube = not src or src == "youtube"
 
-    for kw in keywords:
-        for p in _fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff):
-            _add_post(p)
+    if fetch_hn:
+        for kw in keywords:
+            for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD, created_after_ts=cutoff_ts):
+                _add_post(p)
+
+    if fetch_reddit:
+        for sub in REDDIT_SUBS:
+            for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts):
+                _add_post(p)
+
+    if fetch_youtube:
+        for kw in keywords:
+            for p in _fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff):
+                _add_post(p)
 
     conn = get_connection()
     cursor = conn.cursor()
