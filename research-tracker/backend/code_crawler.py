@@ -1,5 +1,6 @@
 """Code crawler: GitHub, Hugging Face."""
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
@@ -61,7 +62,7 @@ def _fetch_github(query: str, max_results: int = 15, created_since: str | None =
 def _fetch_huggingface(query: str, max_results: int = 15, cutoff_dt: datetime | None = None) -> list[dict]:
     """Fetch from Hugging Face Hub (models). cutoff_dt: filter items created after this (client-side)."""
     posts = []
-    limit = min(max(max_results, 80), 100) if cutoff_dt else min(max_results, 50)
+    limit = min(max(max_results, 50), 50) if cutoff_dt else min(max_results, 50)
     sort = "created" if cutoff_dt else "downloads"
     try:
         r = requests.get(
@@ -158,13 +159,26 @@ def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) 
         if not keywords:
             keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
 
-    for kw in [k.lower() for k in keywords]:
-        for p in _fetch_github(kw, max_results=CODE_PER_KEYWORD, created_since=created_since):
-            _add_post(p)
+    kw_lower = [k.lower() for k in keywords]
 
-    for kw in [k.lower() for k in keywords]:
-        for p in _fetch_huggingface(kw, max_results=CODE_PER_KEYWORD, cutoff_dt=cutoff_dt):
-            _add_post(p)
+    def _fetch_github_batch():
+        out = []
+        for kw in kw_lower:
+            out.extend(_fetch_github(kw, max_results=CODE_PER_KEYWORD, created_since=created_since))
+        return out
+
+    def _fetch_hf_batch():
+        out = []
+        for kw in kw_lower:
+            out.extend(_fetch_huggingface(kw, max_results=CODE_PER_KEYWORD, cutoff_dt=cutoff_dt))
+        return out
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        fut_gh = ex.submit(_fetch_github_batch)
+        fut_hf = ex.submit(_fetch_hf_batch)
+        for batch in [fut_gh.result(), fut_hf.result()]:
+            for p in batch:
+                _add_post(p)
 
     conn = get_connection()
     cursor = conn.cursor()

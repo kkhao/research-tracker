@@ -1,5 +1,6 @@
 """Community crawler: Hacker News, Reddit, YouTube."""
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
@@ -238,19 +239,39 @@ def fetch_and_store_posts(
     fetch_reddit = (not src or src == "reddit") and (not tag or not tag.strip() or tag.strip() not in POST_TAG_KEYWORDS)
     fetch_youtube = not src or src == "youtube"
 
+    def _fetch_hn_batch():
+        out = []
+        if fetch_hn:
+            for kw in keywords:
+                out.extend(_fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD, created_after_ts=cutoff_ts))
+        return out
+
+    def _fetch_reddit_batch():
+        out = []
+        if fetch_reddit:
+            for sub in REDDIT_SUBS:
+                out.extend(_fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts, errors=errors))
+        return out
+
+    def _fetch_youtube_batch():
+        out = []
+        if fetch_youtube:
+            for kw in keywords:
+                out.extend(_fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff))
+        return out
+
+    tasks = []
     if fetch_hn:
-        for kw in keywords:
-            for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD, created_after_ts=cutoff_ts):
-                _add_post(p)
-
+        tasks.append(_fetch_hn_batch)
     if fetch_reddit:
-        for sub in REDDIT_SUBS:
-            for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts, errors=errors):
-                _add_post(p)
-
+        tasks.append(_fetch_reddit_batch)
     if fetch_youtube:
-        for kw in keywords:
-            for p in _fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff):
+        tasks.append(_fetch_youtube_batch)
+
+    with ThreadPoolExecutor(max_workers=min(3, len(tasks) or 1)) as ex:
+        futures = [ex.submit(fn) for fn in tasks]
+        for fut in as_completed(futures):
+            for p in fut.result():
                 _add_post(p)
 
     conn = get_connection()

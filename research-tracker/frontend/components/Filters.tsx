@@ -55,7 +55,6 @@ const TAG_OPTIONS = [
   { value: "具身智能", label: "具身智能" },
   { value: "多模态", label: "多模态" },
   { value: "3D重建/生成/渲染", label: "3D重建/生成/渲染" },
-  { value: "3D设计", label: "3D设计" },
   { value: "VR/AR", label: "VR/AR" },
   { value: "可重光照/逆渲染", label: "可重光照/逆渲染" },
   { value: "3D人体/角色", label: "3D人体/角色" },

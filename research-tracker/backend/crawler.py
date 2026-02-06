@@ -673,9 +673,11 @@ def _matches_subscription(paper: dict, sub) -> bool:
 def fetch_and_store(days: int = 14, tag: str | None = None):
     """Fetch papers and store in database. tag: 选定标签时仅 arXiv 按该标签关键词抓取。"""
     init_db()
-    papers = fetch_recent_papers(days=days, tag=tag)
-    papers += fetch_openreview_papers(days=days)
-    papers += fetch_semantic_scholar_papers(days=days)
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        fut_arxiv = ex.submit(fetch_recent_papers, days=days, tag=tag)
+        fut_or = ex.submit(fetch_openreview_papers, days)
+        fut_s2 = ex.submit(fetch_semantic_scholar_papers, days)
+        papers = fut_arxiv.result() + fut_or.result() + fut_s2.result()
 
     conn = get_connection()
     cursor = conn.cursor()

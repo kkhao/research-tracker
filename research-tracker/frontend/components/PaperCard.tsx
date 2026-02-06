@@ -8,7 +8,6 @@ const TAG_CLASSES: Record<string, string> = {
   "多模态": "tag-multimodal",
   "3D重建/生成/渲染": "tag-3dgen",
   "VR/AR": "tag-vr",
-  "3D设计": "tag-3ddesign",
   "可重光照/逆渲染": "tag-relight",
   "3D人体/角色": "tag-human",
   "3DGS编辑": "tag-3dgs-edit",
