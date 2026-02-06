@@ -5,29 +5,11 @@ import requests
 from datetime import datetime, timedelta
 from database import get_connection, init_db, load_crawl_keywords
 from tagging import tag_post, tags_to_str
+from crawler import ARXIV_SEARCH_KEYWORDS
 
 HN_API = "https://hn.algolia.com/api/v1/search"
 REDDIT_BASE = "https://www.reddit.com"
 YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
-
-# 统一抓取关键词（HN/GitHub/YouTube/HuggingFace 共用）
-COMMUNITY_KEYWORDS = [
-    "Gaussian Splatting",
-    "3DGS",
-    "4DGS",
-    "world model",
-    "physics simulation",
-    "MPM",
-    "diffusion 3D",
-    "VR AR",
-    "relighting",
-    "inverse rendering",
-    "3D reconstruction",
-    "3D generation",
-    "human avatar",
-    "character animation",
-    "Gaussian splatting editing",
-]
 
 REDDIT_SUBS = ["MachineLearning", "computervision", "LocalLLaMA"]
 # 每个关键词抓取条数（10-20），Reddit 按子版块 limit 单独设置
@@ -191,7 +173,9 @@ def fetch_and_store_posts(days: int = 7) -> int:
 
     keywords = load_crawl_keywords("community")
     if not keywords:
-        keywords = COMMUNITY_KEYWORDS
+        keywords = ARXIV_SEARCH_KEYWORDS
+    if not keywords:
+        keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
     # 使用全部关键词统一抓取，每关键词 10-20 条（COMMUNITY_PER_KEYWORD）
     for kw in keywords:
         for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD):

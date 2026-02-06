@@ -4,29 +4,12 @@ from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from database import get_connection, init_db, load_crawl_keywords
 from tagging import tag_post, tags_to_str
+from crawler import ARXIV_SEARCH_KEYWORDS
 
 GITHUB_API = "https://api.github.com/search/repositories"
 HF_API = "https://huggingface.co/api/models"
 
-CODE_KEYWORDS = [
-    "Gaussian Splatting",
-    "3DGS",
-    "4DGS",
-    "world model",
-    "physics simulation",
-    "MPM",
-    "diffusion 3D",
-    "VR AR",
-    "relighting",
-    "inverse rendering",
-    "3D reconstruction",
-    "3D generation",
-    "human avatar",
-    "character animation",
-    "Gaussian splatting editing",
-]
-
-CODE_PER_KEYWORD = min(20, max(10, int(os.getenv("COMMUNITY_PER_KEYWORD", "15"))))
+CODE_PER_KEYWORD = min(30, max(10, int(os.getenv("CODE_PER_KEYWORD", "20"))))
 
 
 def _fetch_github(query: str, max_results: int = 15) -> list[dict]:
@@ -138,7 +121,9 @@ def fetch_and_store_code_posts() -> int:
 
     keywords = load_crawl_keywords("community")
     if not keywords:
-        keywords = CODE_KEYWORDS
+        keywords = ARXIV_SEARCH_KEYWORDS
+    if not keywords:
+        keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
 
     for kw in [k.lower() for k in keywords]:
         for p in _fetch_github(kw, max_results=CODE_PER_KEYWORD):
