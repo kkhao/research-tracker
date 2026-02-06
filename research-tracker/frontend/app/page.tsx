@@ -346,7 +346,8 @@ export default function Home() {
     setPostsRefreshing(true);
     setPostsError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/refresh-code`, { method: "POST" });
+      const daysParam = codeFilters.days < 365 ? `?days=${codeFilters.days}` : "";
+      const res = await fetch(`${API_BASE}/api/refresh-code${daysParam}`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.status === "ok") {
         const fetched = await fetchCodePosts();
@@ -367,7 +368,7 @@ export default function Home() {
     setPostsRefreshing(true);
     setPostsError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/refresh-posts?days=7`, {
+      const res = await fetch(`${API_BASE}/api/refresh-posts?days=90`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));
@@ -390,7 +391,7 @@ export default function Home() {
     setPostsRefreshing(true);
     setPostsError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/refresh-company-posts`, {
+      const res = await fetch(`${API_BASE}/api/refresh-company-posts?days=90`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));
@@ -419,7 +420,7 @@ export default function Home() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 分钟超时（按标签分页抓取较耗时）
     try {
-      const res = await fetch(`${API_BASE}/api/refresh?days=7`, {
+      const res = await fetch(`${API_BASE}/api/refresh?days=14`, {
         method: "POST",
         signal: controller.signal,
       });
@@ -737,8 +738,8 @@ export default function Home() {
                     }
                     className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                   >
-                    <option value={30}>近30天</option>
-                    <option value={90}>近90天</option>
+                    <option value={30}>近一月</option>
+                    <option value={90}>近三月</option>
                     <option value={365}>全部</option>
                   </select>
                   <button

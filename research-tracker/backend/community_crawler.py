@@ -16,17 +16,20 @@ REDDIT_SUBS = ["MachineLearning", "computervision", "LocalLLaMA"]
 COMMUNITY_PER_KEYWORD = min(20, max(10, int(os.getenv("COMMUNITY_PER_KEYWORD", "15"))))
 
 
-def _fetch_hn(query: str, max_results: int = 20) -> list[dict]:
-    """Fetch from Hacker News via Algolia API."""
+def _fetch_hn(query: str, max_results: int = 20, created_after_ts: int | None = None) -> list[dict]:
+    """Fetch from Hacker News via Algolia API. created_after_ts: only items created after this unix timestamp."""
     posts = []
+    params = {
+        "query": query,
+        "tags": "story",
+        "hitsPerPage": max_results,
+    }
+    if created_after_ts is not None:
+        params["numericFilters"] = [f"created_at_i>{created_after_ts}"]
     try:
         r = requests.get(
             HN_API,
-            params={
-                "query": query,
-                "tags": "story",
-                "hitsPerPage": max_results,
-            },
+            params=params,
             timeout=20,
             headers={"User-Agent": "ResearchTracker/1.0"},
         )
@@ -53,8 +56,8 @@ def _fetch_hn(query: str, max_results: int = 20) -> list[dict]:
     return posts
 
 
-def _fetch_reddit(sub: str, limit: int = 15) -> list[dict]:
-    """Fetch from Reddit (public JSON, no auth)."""
+def _fetch_reddit(sub: str, limit: int = 15, cutoff_ts: float | None = None) -> list[dict]:
+    """Fetch from Reddit (public JSON, no auth). cutoff_ts: only items created after this unix timestamp."""
     posts = []
     try:
         r = requests.get(
@@ -71,6 +74,8 @@ def _fetch_reddit(sub: str, limit: int = 15) -> list[dict]:
             if not post_id:
                 continue
             created = d.get("created")
+            if cutoff_ts is not None and created is not None and created < cutoff_ts:
+                continue
             posts.append({
                 "id": f"reddit_{post_id}",
                 "source": "reddit",
@@ -88,8 +93,8 @@ def _fetch_reddit(sub: str, limit: int = 15) -> list[dict]:
     return posts
 
 
-def _fetch_youtube(query: str, max_results: int = 15) -> list[dict]:
-    """Fetch from YouTube Data API v3 (requires YOUTUBE_API_KEY env)."""
+def _fetch_youtube(query: str, max_results: int = 15, cutoff_dt: datetime | None = None) -> list[dict]:
+    """Fetch from YouTube Data API v3 (requires YOUTUBE_API_KEY env). cutoff_dt: only items published after this."""
     posts = []
     api_key = os.environ.get("YOUTUBE_API_KEY")
     if not api_key:
@@ -116,6 +121,13 @@ def _fetch_youtube(query: str, max_results: int = 15) -> list[dict]:
                 continue
             snip = item.get("snippet", {})
             published = snip.get("publishedAt")
+            if cutoff_dt and published:
+                try:
+                    pub_dt = datetime.fromisoformat(published.replace("Z", "+00:00"))
+                    if pub_dt.replace(tzinfo=None) < cutoff_dt.replace(tzinfo=None):
+                        continue
+                except (ValueError, TypeError):
+                    pass
             posts.append({
                 "id": f"youtube_{vid}",
                 "source": "youtube",
@@ -153,12 +165,15 @@ def _normalize_url(url: str) -> str:
         return url
 
 
-def fetch_and_store_posts(days: int = 7) -> int:
-    """Fetch community posts and store in DB."""
+def fetch_and_store_posts(days: int = 90) -> int:
+    """Fetch community posts and store in DB. Only items from last N days (default 90 = 3 months)."""
     init_db()
     all_posts = []
     seen_ids = set()
     seen_urls = set()
+
+    cutoff = datetime.now() - timedelta(days=days)
+    cutoff_ts = int(cutoff.timestamp())
 
     def _add_post(p):
         if p["id"] in seen_ids:
@@ -176,17 +191,17 @@ def fetch_and_store_posts(days: int = 7) -> int:
         keywords = ARXIV_SEARCH_KEYWORDS
     if not keywords:
         keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
-    # 使用全部关键词统一抓取，每关键词 10-20 条（COMMUNITY_PER_KEYWORD）
+    # 使用全部关键词统一抓取，每关键词 10-20 条（COMMUNITY_PER_KEYWORD），仅近 N 天
     for kw in keywords:
-        for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD):
+        for p in _fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD, created_after_ts=cutoff_ts):
             _add_post(p)
 
     for sub in REDDIT_SUBS:
-        for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD):
+        for p in _fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts):
             _add_post(p)
 
     for kw in keywords:
-        for p in _fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD):
+        for p in _fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff):
             _add_post(p)
 
     conn = get_connection()

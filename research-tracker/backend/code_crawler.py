@@ -1,5 +1,6 @@
 """Code crawler: GitHub, Hugging Face."""
 import os
+from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from database import get_connection, init_db, load_crawl_keywords
@@ -12,13 +13,25 @@ HF_API = "https://huggingface.co/api/models"
 CODE_PER_KEYWORD = min(30, max(10, int(os.getenv("CODE_PER_KEYWORD", "20"))))
 
 
-def _fetch_github(query: str, max_results: int = 15) -> list[dict]:
-    """Fetch from GitHub search (repos)."""
+def _parse_date(s: str | None) -> datetime | None:
+    """Parse ISO date string to datetime for comparison."""
+    if not s or not str(s).strip():
+        return None
+    try:
+        s = str(s).strip()[:19]
+        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _fetch_github(query: str, max_results: int = 15, created_since: str | None = None) -> list[dict]:
+    """Fetch from GitHub search (repos). created_since: YYYY-MM-DD for created:>= filter."""
     posts = []
+    q = f"{query} created:>={created_since}" if created_since else query
     try:
         r = requests.get(
             GITHUB_API,
-            params={"q": query, "sort": "created", "per_page": max_results},
+            params={"q": q, "sort": "created", "per_page": max_results},
             headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "ResearchTracker"},
             timeout=15,
         )
@@ -45,16 +58,18 @@ def _fetch_github(query: str, max_results: int = 15) -> list[dict]:
     return posts
 
 
-def _fetch_huggingface(query: str, max_results: int = 15) -> list[dict]:
-    """Fetch from Hugging Face Hub (models)."""
+def _fetch_huggingface(query: str, max_results: int = 15, cutoff_dt: datetime | None = None) -> list[dict]:
+    """Fetch from Hugging Face Hub (models). cutoff_dt: filter items created after this (client-side)."""
     posts = []
+    limit = min(max(max_results, 80), 100) if cutoff_dt else min(max_results, 50)
+    sort = "created" if cutoff_dt else "downloads"
     try:
         r = requests.get(
             HF_API,
             params={
                 "search": query,
-                "limit": min(max_results, 50),
-                "sort": "downloads",
+                "limit": limit,
+                "sort": sort,
             },
             timeout=20,
             headers={"User-Agent": "ResearchTracker/1.0"},
@@ -65,8 +80,12 @@ def _fetch_huggingface(query: str, max_results: int = 15) -> list[dict]:
             model_id = item.get("modelId") or item.get("id")
             if not model_id:
                 continue
-            author = model_id.split("/")[0] if "/" in model_id else ""
             created = item.get("createdAt") or item.get("lastModified")
+            if cutoff_dt and created:
+                dt = _parse_date(created)
+                if dt and dt.replace(tzinfo=None) < cutoff_dt.replace(tzinfo=None):
+                    continue
+            author = model_id.split("/")[0] if "/" in model_id else ""
             posts.append({
                 "id": f"hf_{model_id.replace('/', '_')}",
                 "source": "huggingface",
@@ -101,12 +120,21 @@ def _normalize_url(url: str) -> str:
         return url
 
 
-def fetch_and_store_code_posts() -> int:
-    """Fetch GitHub and Hugging Face posts and store in DB."""
+def fetch_and_store_code_posts(days: int | None = None) -> int:
+    """Fetch GitHub and Hugging Face posts and store in DB.
+    days: only fetch items created in last N days (30/90). None = no filter (all).
+    """
     init_db()
     all_posts = []
     seen_ids = set()
     seen_urls = set()
+
+    created_since = None
+    cutoff_dt = None
+    if days and days > 0:
+        cutoff = datetime.now() - timedelta(days=days)
+        created_since = cutoff.strftime("%Y-%m-%d")
+        cutoff_dt = cutoff
 
     def _add_post(p):
         if p["id"] in seen_ids:
@@ -126,11 +154,11 @@ def fetch_and_store_code_posts() -> int:
         keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
 
     for kw in [k.lower() for k in keywords]:
-        for p in _fetch_github(kw, max_results=CODE_PER_KEYWORD):
+        for p in _fetch_github(kw, max_results=CODE_PER_KEYWORD, created_since=created_since):
             _add_post(p)
 
     for kw in [k.lower() for k in keywords]:
-        for p in _fetch_huggingface(kw, max_results=CODE_PER_KEYWORD):
+        for p in _fetch_huggingface(kw, max_results=CODE_PER_KEYWORD, cutoff_dt=cutoff_dt):
             _add_post(p)
 
     conn = get_connection()

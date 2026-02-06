@@ -263,25 +263,25 @@ def list_posts(
 
 
 @app.post("/api/refresh-posts")
-def refresh_posts(days: int = Query(7, ge=1, le=30)):
-    """Trigger crawl to fetch community posts (HN, Reddit, YouTube)."""
+def refresh_posts(days: int = Query(90, ge=1, le=365)):
+    """Trigger crawl to fetch community posts (HN, Reddit, YouTube). Only last N days (default 90 = 3 months)."""
     count = fetch_and_store_posts(days=days)
     _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count}
 
 
 @app.post("/api/refresh-code")
-def refresh_code_posts():
+def refresh_code_posts(days: int | None = Query(None, ge=1, le=365, description="Only fetch items created in last N days (30/90). Omit for all.")):
     """Trigger crawl to fetch code posts (GitHub, Hugging Face)."""
-    count = fetch_and_store_code_posts()
+    count = fetch_and_store_code_posts(days=days)
     _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count}
 
 
 @app.post("/api/refresh-company-posts")
-def refresh_company_posts():
-    """Trigger crawl to fetch company product updates."""
-    count, errors = fetch_and_store_company_posts()
+def refresh_company_posts(days: int = Query(90, ge=1, le=365)):
+    """Trigger crawl to fetch company product updates. Only last N days (default 90 = 3 months)."""
+    count, errors = fetch_and_store_company_posts(days=days)
     _invalidate_tags_cache()
     return {"status": "ok", "posts_added": count, "errors": errors}
 

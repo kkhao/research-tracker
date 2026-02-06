@@ -7,10 +7,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import html
 import feedparser
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # 每家公司抓取条数（减少请求量）
-COMPANY_MAX_RESULTS = int(os.getenv("COMPANY_FETCH_MAX_RESULTS", "3"))
+COMPANY_MAX_RESULTS = int(os.getenv("COMPANY_FETCH_MAX_RESULTS", "5"))
 # 并行抓取线程数
 COMPANY_FETCH_WORKERS = int(os.getenv("COMPANY_FETCH_WORKERS", "6"))
 
@@ -84,8 +84,8 @@ def _get_requests_session():
     return s
 
 
-def _fetch_company_news(company: str, max_results: int = 10) -> tuple[list[dict], str | None]:
-    """Fetch company news from Google News RSS. Returns (posts, error_msg)."""
+def _fetch_company_news(company: str, max_results: int = 10, cutoff_dt: datetime | None = None) -> tuple[list[dict], str | None]:
+    """Fetch company news from Google News RSS. Returns (posts, error_msg). cutoff_dt: only items published after this."""
     posts = []
     query = COMPANY_QUERIES.get(company, company)
     try:
@@ -97,7 +97,18 @@ def _fetch_company_news(company: str, max_results: int = 10) -> tuple[list[dict]
         r = session.get(url, timeout=15)
         r.raise_for_status()
         feed = feedparser.parse(r.content)
-        for i, entry in enumerate(feed.get("entries", [])[:max_results]):
+        count = 0
+        for i, entry in enumerate(feed.get("entries", [])):
+            if count >= max_results:
+                break
+            published = entry.get("published_parsed")
+            if cutoff_dt and published:
+                try:
+                    pub_dt = datetime(*published[:6], tzinfo=timezone.utc)
+                    if pub_dt.replace(tzinfo=None) < cutoff_dt.replace(tzinfo=None):
+                        continue
+                except (TypeError, ValueError):
+                    pass
             link = entry.get("link") or ""
             title = _strip_html(entry.get("title") or "") or "(no title)"
             published = entry.get("published_parsed")
@@ -121,14 +132,15 @@ def _fetch_company_news(company: str, max_results: int = 10) -> tuple[list[dict]
                 "channel": company,
                 "created_at": created_at,
             })
+            count += 1
         return (posts, None)
     except Exception as e:
         err = f"{company}: {e}"
         return (posts, err)
 
 
-def _fetch_wechat_news(company: str, max_results: int = 5) -> list[dict]:
-    """Fetch WeChat official account articles via RSSHub."""
+def _fetch_wechat_news(company: str, max_results: int = 5, cutoff_dt: datetime | None = None) -> list[dict]:
+    """Fetch WeChat official account articles via RSSHub. cutoff_dt: only items published after this."""
     posts = []
     biz_aid = WECHAT_MP_ALBUMS.get(company)
     if not biz_aid:
@@ -137,7 +149,18 @@ def _fetch_wechat_news(company: str, max_results: int = 5) -> list[dict]:
     try:
         url = f"{RSSHUB_BASE}/wechat/mp/msgalbum/{biz}/{aid}"
         feed = feedparser.parse(url, agent="ResearchTracker/1.0")
-        for i, entry in enumerate(feed.get("entries", [])[:max_results]):
+        count = 0
+        for i, entry in enumerate(feed.get("entries", [])):
+            if count >= max_results:
+                break
+            published = entry.get("published_parsed")
+            if cutoff_dt and published:
+                try:
+                    pub_dt = datetime(*published[:6], tzinfo=timezone.utc)
+                    if pub_dt.replace(tzinfo=None) < cutoff_dt.replace(tzinfo=None):
+                        continue
+                except (TypeError, ValueError):
+                    pass
             link = entry.get("link") or ""
             title = _strip_html(entry.get("title") or "") or "(no title)"
             published = entry.get("published_parsed")
@@ -161,6 +184,7 @@ def _fetch_wechat_news(company: str, max_results: int = 5) -> list[dict]:
                 "channel": company,
                 "created_at": created_at,
             })
+            count += 1
     except Exception as e:
         print(f"WeChat {company} fetch error: {e}")
     return posts
@@ -184,8 +208,8 @@ def _normalize_url(url: str) -> str:
         return url
 
 
-def fetch_and_store_company_posts() -> tuple[int, list[str]]:
-    """Fetch company news and store in DB. Returns (inserted_count, errors)."""
+def fetch_and_store_company_posts(days: int = 90) -> tuple[int, list[str]]:
+    """Fetch company news and store in DB. Only items from last N days (default 90 = 3 months). Returns (inserted_count, errors)."""
     init_db()
     all_posts = []
     errors: list[str] = []
@@ -194,6 +218,8 @@ def fetch_and_store_company_posts() -> tuple[int, list[str]]:
     companies = set()
     for _dir, comps in COMPANY_DIRECTIONS.items():
         companies.update(comps)
+
+    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=days)
 
     def _add_post(p):
         if p["id"] in seen_ids:
@@ -207,7 +233,7 @@ def fetch_and_store_company_posts() -> tuple[int, list[str]]:
         all_posts.append(p)
 
     def _fetch_one(company: str):
-        posts, err = _fetch_company_news(company, max_results=COMPANY_MAX_RESULTS)
+        posts, err = _fetch_company_news(company, max_results=COMPANY_MAX_RESULTS, cutoff_dt=cutoff_dt)
         return (company, posts, err)
 
     with ThreadPoolExecutor(max_workers=COMPANY_FETCH_WORKERS) as ex:
@@ -220,14 +246,17 @@ def fetch_and_store_company_posts() -> tuple[int, list[str]]:
                 _add_post(p)
 
     for company in companies:
-        for p in _fetch_wechat_news(company, max_results=3):
+        for p in _fetch_wechat_news(company, max_results=5, cutoff_dt=cutoff_dt):
             _add_post(p)
 
     # 自定义关键词：作为额外 Google News 搜索
     extra_kws = load_crawl_keywords("company")
     if extra_kws:
+        def _fetch_kw(kw: str):
+            posts, err = _fetch_company_news(kw, max_results=COMPANY_MAX_RESULTS, cutoff_dt=cutoff_dt)
+            return (kw, posts, err)
         with ThreadPoolExecutor(max_workers=COMPANY_FETCH_WORKERS) as ex:
-            futures = {ex.submit(_fetch_one, kw): kw for kw in extra_kws}
+            futures = {ex.submit(_fetch_kw, kw): kw for kw in extra_kws}
             for fut in as_completed(futures):
                 kw, posts, err = fut.result()
                 if err:
