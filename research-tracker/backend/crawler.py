@@ -1,4 +1,5 @@
 """arXiv paper crawler - uses arXiv REST API (no arxiv/feedparser, Python 3.13+ compatible)."""
+import logging
 import urllib.parse
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,6 +11,7 @@ import requests
 from database import get_connection, init_db, load_crawl_keywords
 from tagging import tag_paper, tags_to_str, BUSINESS_TAGS, PAPER_TAG_KEYWORDS
 
+log = logging.getLogger(__name__)
 ARXIV_API = "http://export.arxiv.org/api/query"
 
 # arXiv 按关键词搜索：轮询取词，确保每个研究方向都有代表关键词参与抓取
@@ -39,6 +41,7 @@ ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO", "cs.CL", "cs.AI", "cs.MM", "eess.IV"]
 
 OPENREVIEW_API = "https://api.openreview.net/notes"
+OPENREVIEW_API_V2 = "https://api2.openreview.net/notes"
 OPENREVIEW_HEADERS = {"User-Agent": "ResearchTracker/1.0"}
 # (venue_id, display_name) - 使用 invitation 查询（content.venueid 实测返回空）
 # API v2 格式: {venue_id}/-/Submission; 部分旧会议用 Blind_Submission
@@ -267,11 +270,76 @@ def _openreview_val(v):
     return v.get("value", v) if isinstance(v, dict) else (v or "")
 
 
+def _fetch_openreview_via_rest_v2(venue_id: str, venue_name: str, cutoff_ms: int, seen_ids: set, max_results: int) -> list[dict]:
+    """Fallback: 直接用 requests 调用 api2.openreview.net/notes，不依赖 openreview-py。"""
+    papers = []
+    for inv_suffix in ["Submission", "Blind_Submission"]:
+        invitation = f"{venue_id}/-/{inv_suffix}"
+        offset = 0
+        for _ in range(5):  # 最多 5 页
+            try:
+                r = requests.get(
+                    OPENREVIEW_API_V2,
+                    params={"invitation": invitation, "limit": min(100, max_results - len(papers)), "offset": offset, "sort": "tcdate:desc"},
+                    headers=OPENREVIEW_HEADERS,
+                    timeout=30,
+                )
+                r.raise_for_status()
+                data = r.json()
+            except Exception as e:
+                log.warning("OpenReview API v2 %s: %s", invitation, e)
+                break
+            notes = data.get("notes", [])
+            if not notes:
+                break
+            for note in notes:
+                note_id = note.get("id")
+                if not note_id or note_id in seen_ids:
+                    continue
+                pdate = note.get("pdate") or note.get("cdate") or 0
+                if pdate and pdate < cutoff_ms:
+                    continue
+                content = note.get("content") or {}
+                title = _openreview_val(content.get("title") or "")
+                abstract = _openreview_val(content.get("abstract") or "")
+                authors_raw = content.get("authors") or []
+                authors = [_openreview_val(a) if isinstance(a, dict) else str(a) for a in (authors_raw if isinstance(authors_raw, list) else [authors_raw])]
+                authors_str = ", ".join(a for a in authors if isinstance(a, str))
+                forum_url = f"https://openreview.net/forum?id={note_id}"
+                published_at = datetime.fromtimestamp((pdate or 0) / 1000, tz=timezone.utc).isoformat()
+                papers.append({
+                    "id": f"openreview:{note_id}",
+                    "title": title.replace("\n", " "),
+                    "abstract": abstract.replace("\n", " "),
+                    "authors": authors_str,
+                    "categories": venue_name,
+                    "pdf_url": f"https://openreview.net/pdf?id={note_id}",
+                    "arxiv_url": forum_url,
+                    "published_at": published_at,
+                    "source": "openreview",
+                    "doi": _openreview_val(content.get("doi")) if content.get("doi") else None,
+                    "url": forum_url,
+                    "affiliations": "",
+                    "keywords": "",
+                    "updated_at": None,
+                })
+                seen_ids.add(note_id)
+                if len(papers) >= max_results:
+                    return papers
+            offset += len(notes)
+            if len(notes) < 100:
+                break
+        if papers:
+            return papers
+    return papers
+
+
 def _fetch_openreview_via_client(venue_id: str, venue_name: str, cutoff_ms: int, seen_ids: set, max_results: int) -> list[dict]:
     """Use openreview-py client (supports API v2 venues)."""
     try:
         import openreview
-    except ImportError:
+    except ImportError as e:
+        log.info("openreview-py not installed, will use REST fallback: %s", e)
         return []
     if max_results <= 0:
         return []
@@ -335,7 +403,8 @@ def _fetch_openreview_via_client(venue_id: str, venue_name: str, cutoff_ms: int,
                     continue
             if papers:
                 return papers
-        except Exception:
+        except Exception as e:
+            log.debug("OpenReview client %s %s: %s", venue_id, inv_suffix, e)
             continue
     return papers
 
@@ -359,9 +428,19 @@ def fetch_openreview_papers(days: int = 7, max_results: int = 500, min_per_venue
         )
         if client_papers:
             papers.extend(client_papers)
+            print(f"[OpenReview] {venue_name}: {len(client_papers)} papers (client)")
             continue
 
-        # 回退到 REST API（api.openreview.net 对部分旧会议有效）
+        # 回退到 api2.openreview.net REST（不依赖 openreview-py，部署环境无 openreview-py 时使用）
+        rest_papers = _fetch_openreview_via_rest_v2(
+            venue_id, venue_name, cutoff_ms, seen_ids, venue_quota
+        )
+        if rest_papers:
+            papers.extend(rest_papers)
+            print(f"[OpenReview] {venue_name}: {len(rest_papers)} papers (REST v2)")
+            continue
+
+        # 最后回退到 api.openreview.net v1（部分旧会议有效）
         venue_count = 0
         for inv_suffix in ["Submission", "Blind_Submission"]:
             if venue_count >= max_per_venue:
