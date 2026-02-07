@@ -9,7 +9,7 @@ from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 from database import init_db, get_connection, migrate_diffusion_to_multimodal_tag
-from crawler import fetch_and_store, backfill_paper_tags
+from crawler import fetch_and_store, backfill_paper_tags, cleanup_papers_without_business_tags
 from community_crawler import fetch_and_store_posts
 from company_crawler import fetch_and_store_company_posts, COMPANY_DIRECTIONS, _strip_html as strip_html
 from code_crawler import fetch_and_store_code_posts
@@ -179,10 +179,11 @@ def refresh_papers(
     days: int = Query(15, ge=1, le=30),
     tag: str | None = Query(None, description="Only fetch/filter papers for this tag (3DGS, 视频/世界模型, etc.). arXiv: 按关键词抓取；OpenReview/S2: 抓取后按标签过滤入库。"),
 ):
-    """Trigger crawl to fetch new papers from arXiv, OpenReview, S2. tag 指定时 arXiv 按关键词抓取，OpenReview/S2 抓取后按该标签过滤入库。"""
+    """Trigger crawl to fetch new papers from arXiv, OpenReview, S2. tag 指定时 arXiv 按关键词抓取，OpenReview/S2 抓取后按该标签过滤入库。抓取后自动清理无业务标签的旧数据。"""
     count, notifications = fetch_and_store(days=days, tag=tag)
+    deleted = cleanup_papers_without_business_tags(openreview_only=False)
     _invalidate_tags_cache()
-    return {"status": "ok", "papers_added": count, "notifications_added": notifications}
+    return {"status": "ok", "papers_added": count, "notifications_added": notifications, "papers_deleted": deleted}
 
 
 @app.post("/api/backfill-tags")
@@ -191,6 +192,16 @@ def backfill_tags(force: bool = Query(False, description="If true, re-tag all pa
     n = backfill_paper_tags(force=force)
     _invalidate_tags_cache()
     return {"status": "ok", "papers_updated": n}
+
+
+@app.post("/api/cleanup-papers")
+def cleanup_papers(
+    openreview_only: bool = Query(False, description="If true, only delete OpenReview papers without research direction tags"),
+):
+    """Delete papers without business tags. Cleans up old data that no longer meets storage rules."""
+    n = cleanup_papers_without_business_tags(openreview_only=openreview_only)
+    _invalidate_tags_cache()
+    return {"status": "ok", "papers_deleted": n}
 
 
 @app.get("/api/posts")

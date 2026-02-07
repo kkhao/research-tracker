@@ -12,6 +12,7 @@ from database import get_connection, init_db, load_crawl_keywords
 from tagging import (
     tag_paper,
     tags_to_str,
+    str_to_tags,
     BUSINESS_TAGS,
     PAPER_TAG_KEYWORDS,
     THREEDGS_KEYWORDS,
@@ -821,3 +822,30 @@ def backfill_paper_tags(force: bool = False) -> int:
     conn.commit()
     conn.close()
     return updated
+
+
+def cleanup_papers_without_business_tags(openreview_only: bool = False) -> int:
+    """Delete papers that have no business tags. Returns count deleted.
+    openreview_only: if True, only delete OpenReview papers without research direction tags."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, tags, source FROM papers")
+    rows = cursor.fetchall()
+    deleted = 0
+    for row in rows:
+        tags_list = str_to_tags(row.get("tags") or "")
+        has_business = any(t in BUSINESS_TAGS for t in tags_list)
+        if not has_business:
+            cursor.execute("DELETE FROM notifications WHERE paper_id = ?", (row["id"],))
+            cursor.execute("DELETE FROM papers WHERE id = ?", (row["id"],))
+            deleted += 1
+            continue
+        if openreview_only and row.get("source") == "openreview":
+            has_research = any(t in PAPER_TAG_KEYWORDS for t in tags_list)
+            if not has_research:
+                cursor.execute("DELETE FROM notifications WHERE paper_id = ?", (row["id"],))
+                cursor.execute("DELETE FROM papers WHERE id = ?", (row["id"],))
+                deleted += 1
+    conn.commit()
+    conn.close()
+    return deleted
