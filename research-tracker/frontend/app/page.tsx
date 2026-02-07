@@ -98,6 +98,7 @@ export default function Home() {
     domain: "",
     tag: "",
     days: 365,
+    sort: "created",
   });
   const [companyFilters, setCompanyFilters] = useState({
     direction: "",
@@ -233,6 +234,7 @@ export default function Home() {
       if (codeFilters.domain) params.set("domain", codeFilters.domain);
       if (codeFilters.tag) params.set("tag", codeFilters.tag);
       params.set("days", String(codeFilters.days));
+      if (codeFilters.sort === "star") params.set("sort", "star");
       params.set("limit", "200");
       const res = await fetch(`${API_BASE}/api/posts?${params}`);
       if (res.ok) {
@@ -328,6 +330,7 @@ export default function Home() {
     codeFilters.domain,
     codeFilters.tag,
     codeFilters.days,
+    codeFilters.sort,
     companyFilters.direction,
     companyFilters.company,
     debouncedCompanySearch,
@@ -698,13 +701,13 @@ export default function Home() {
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="多模态">多模态</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
                   <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
+                  <option value="空间智能">空间智能</option>
                 </select>
                 <select
                   value={codeFilters.tag}
@@ -718,13 +721,13 @@ export default function Home() {
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="多模态">多模态</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
                   <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
+                  <option value="空间智能">空间智能</option>
                   <option value="GitHub">GitHub</option>
                   <option value="Hugging Face">Hugging Face</option>
                 </select>
@@ -738,6 +741,16 @@ export default function Home() {
                   <option value="">全部来源</option>
                   <option value="github">GitHub</option>
                   <option value="huggingface">Hugging Face</option>
+                </select>
+                <select
+                  value={codeFilters.sort}
+                  onChange={(e) =>
+                    setCodeFilters((f) => ({ ...f, sort: e.target.value }))
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                >
+                  <option value="created">按时间</option>
+                  <option value="star">按 Star</option>
                 </select>
                 <div className="flex items-center gap-2 shrink-0">
                   <select
@@ -787,13 +800,13 @@ export default function Home() {
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="多模态">多模态</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
                   <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
+                  <option value="空间智能">空间智能</option>
                 </select>
                 <select
                   value={postFilters.tag}
@@ -807,13 +820,13 @@ export default function Home() {
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="多模态">多模态</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
                   <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
+                  <option value="空间智能">空间智能</option>
                   <option value="HN">HN</option>
                   <option value="Reddit">Reddit</option>
                   <option value="YouTube">YouTube</option>
@@ -877,7 +890,7 @@ export default function Home() {
                   <option value="3d_gen">3D重建/生成/渲染</option>
                   <option value="video_world">视频/世界模型</option>
                   <option value="3d_design">3D设计</option>
-                  <option value="llm">多模态</option>
+                  <option value="llm">大模型</option>
                   <option value="embodied">具身智能</option>
                 </select>
                 <select
@@ -893,7 +906,6 @@ export default function Home() {
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
                   <option value="具身智能">具身智能</option>
-                  <option value="多模态">多模态</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="3D设计">3D设计</option>
                   <option value="VR/AR">VR/AR</option>
@@ -901,6 +913,7 @@ export default function Home() {
                   <option value="3D人体/角色">3D人体/角色</option>
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
+                  <option value="空间智能">空间智能</option>
                 </select>
                 <select
                   value={companyFilters.company}

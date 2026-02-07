@@ -5,13 +5,14 @@ const TAG_CLASSES: Record<string, string> = {
   "视频/世界模型": "tag-video-world",
   "3DGS物理仿真": "tag-physics",
   "具身智能": "tag-embodied",
-  "多模态": "tag-multimodal",
   "3D重建/生成/渲染": "tag-3dgen",
   "VR/AR": "tag-vr",
   "可重光照/逆渲染": "tag-relight",
   "3D人体/角色": "tag-human",
   "3DGS编辑": "tag-3dgs-edit",
   "3DGS水下建模": "tag-underwater",
+  "空间智能": "tag-spatial",
+  "大模型": "tag-default",
 };
 
 function getTagClass(tag: string): string {
@@ -45,18 +46,14 @@ export default function PaperCard({ paper }: { paper: Paper }) {
           <span className="px-2.5 py-1 rounded-lg bg-[var(--accent-muted)] text-[var(--accent)] font-medium border border-[var(--accent)]/20">
             {sourceLabel}
           </span>
-          <span className="text-[var(--text-muted)]">{paper.authors}</span>
+          <span className="text-[var(--text-muted)]">{paper.affiliations || paper.authors}</span>
           <span className="text-[var(--border)]">·</span>
           <span className="text-[var(--text-muted)]">{date}</span>
         </div>
-        {(paper.affiliations || paper.venue || paper.citation_count !== undefined) && (
+        {(paper.venue || paper.citation_count !== undefined) && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
             {paper.venue && <span>{paper.venue}</span>}
-            {paper.venue && (paper.affiliations || paper.citation_count !== undefined) && (
-              <span className="text-[var(--border)]">·</span>
-            )}
-            {paper.affiliations && <span>{paper.affiliations}</span>}
-            {paper.affiliations && paper.citation_count !== undefined && paper.citation_count !== null && (
+            {paper.venue && paper.citation_count !== undefined && paper.citation_count !== null && (
               <span className="text-[var(--border)]">·</span>
             )}
             {paper.citation_count !== undefined && paper.citation_count !== null && (

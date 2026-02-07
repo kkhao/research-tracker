@@ -28,7 +28,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
-    # Migrate 扩散模型 -> 多模态 in existing papers/posts
+    # Migrate 扩散模型 -> 多模态 (legacy); 多模态 tag removed, migration kept for backwards compat
     m = migrate_diffusion_to_multimodal_tag()
     if m > 0:
         print(f"[startup] Migrated 扩散模型->多模态 for {m} rows")
@@ -189,6 +189,7 @@ def list_posts(
     tag: str | None = Query(None, description="Filter by tag (3DGS, 大模型, etc.)"),
     days: int = Query(365, ge=1, le=365, description="Filter by days (default 365=all)"),
     limit: int = Query(50, ge=1, le=200),
+    sort: str | None = Query(None, description="Sort by: created (default) or star (score, GitHub stars / HF downloads)"),
 ):
     """List community and company posts."""
     conn = get_connection()
@@ -228,7 +229,10 @@ def list_posts(
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()[:10]
         query += " AND (created_at >= ? OR created_at IS NULL OR created_at = '')"
         params.append(cutoff)
-    query += " ORDER BY created_at DESC, score DESC LIMIT ?"
+    if sort and sort.strip().lower() == "star":
+        query += " ORDER BY score DESC, created_at DESC LIMIT ?"
+    else:
+        query += " ORDER BY created_at DESC, score DESC LIMIT ?"
     params.append(limit)
     cursor.execute(query, params)
     rows = cursor.fetchall()

@@ -9,7 +9,14 @@ import threading
 import requests
 
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_paper, tags_to_str, BUSINESS_TAGS, PAPER_TAG_KEYWORDS
+from tagging import (
+    tag_paper,
+    tags_to_str,
+    BUSINESS_TAGS,
+    PAPER_TAG_KEYWORDS,
+    THREEDGS_KEYWORDS,
+    THREEDGS_REQUIRED_TAGS,
+)
 
 log = logging.getLogger(__name__)
 ARXIV_API = "http://export.arxiv.org/api/query"
@@ -145,8 +152,8 @@ def _build_arxiv_keyword_query(keywords: list[str], batch_size: int = 6) -> list
     return queries
 
 
-def _build_tag_query(keywords: list[str]) -> str:
-    """Build single arXiv query from a tag's keywords (OR)."""
+def _build_tag_query(keywords: list[str], require_3dgs: bool = False) -> str:
+    """Build single arXiv query from a tag's keywords (OR). require_3dgs: 添加 3dgs 约束（AND 条件）。"""
     cat_part = "+OR+".join(f"cat:{c}" for c in ARXIV_CATEGORIES)
     terms = []
     for kw in keywords:
@@ -160,6 +167,19 @@ def _build_tag_query(keywords: list[str]) -> str:
     if not terms:
         return ""
     kw_part = "+OR+".join(terms)
+    if require_3dgs:
+        gs_terms = []
+        for k in THREEDGS_KEYWORDS:
+            k = k.strip()
+            if len(k) < 3:
+                continue
+            if " " in k:
+                gs_terms.append(f'all:"{k.replace(" ", "+")}"')
+            else:
+                gs_terms.append(f"all:{k}")
+        if gs_terms:
+            gs_part = "+OR+".join(gs_terms)
+            return f"({kw_part})+AND+({gs_part})+AND+({cat_part})"
     return f"({kw_part})+AND+({cat_part})"
 
 
@@ -248,7 +268,8 @@ def fetch_recent_papers(
         valid_kws = [k for k in kws if len(k.strip()) >= 3]
         if not valid_kws:
             continue
-        query = _build_tag_query(valid_kws)
+        require_3dgs = t in THREEDGS_REQUIRED_TAGS
+        query = _build_tag_query(valid_kws, require_3dgs=require_3dgs)
         if not query:
             continue
         search_query = f"({query})+AND+{date_range}"

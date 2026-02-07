@@ -2,19 +2,24 @@
 import re
 from typing import Sequence
 
+# 3DGS 相关关键词：以下标签需同时匹配 3dgs + 该标签关键词，才打标
+THREEDGS_KEYWORDS = ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian", "gaussian splatting"]
+# 需同时包含 3dgs 的标签
+THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "具身智能", "VR/AR", "3DGS水下建模", "空间智能"})
+
 # 研究方向标签：tag -> 匹配关键词（title/abstract/summary 中不区分大小写）
 PAPER_TAG_KEYWORDS: dict[str, list[str]] = {
     "3DGS": ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian"],
     "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model"],
     "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method"],
     "具身智能": ["embodied ai", "embodied intelligence", "robot", "robotics"],
-    "多模态": ["vision-language", "vision language", "vlm", "visual language model", "vision-language model", "diffusion model", "diffusion 3d", "generative ai", "生成式ai"],
     "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "3d render"],
     "VR/AR": ["virtual reality", "augmented reality", "vr ", " ar ", "mixed reality"],
     "可重光照/逆渲染": ["relighting", "relightable", "relight", "lighting editing", "光照编辑", "inverse rendering", "inverse-rendering", "inverse render", "inverse-render"],
     "3D人体/角色": ["human avatar", "character animation", "3d human", "digital human", "人体建模", "角色动画"],
-    "3DGS编辑": ["gaussian splatting edit", "3dgs edit", "splat editing"],
+    "3DGS编辑": ["gaussian splatting edit", "gaussian edit", "3dgs edit", "splat editing"],
     "3DGS水下建模": ["underwater", "水下", "underwater 3d"],
+    "空间智能": ["spatial reasoning", "scene understanding", "spatial understanding", "spatial perception", "spatial intelligence"],
 }
 
 # 社区/公司通用关键词
@@ -23,13 +28,13 @@ POST_TAG_KEYWORDS: dict[str, list[str]] = {
     "视频/世界模型": ["world model", "video generation", "video synthesis", "gen-3", "sora", "runway", "pika"],
     "3DGS物理仿真": ["physics simulation", "physical simulation", "mpm", "material point method"],
     "具身智能": ["embodied", "robot", "robotics", "figure"],
-    "多模态": ["vision-language", "vision language", "vlm", "visual language model", "diffusion", "扩散模型", "stable diffusion"],
     "3D重建/生成/渲染": ["3d generation", "3d gen", "3d reconstruction", "3d rendering", "tripo", "meshy", "luma", "wonder3d"],
     "VR/AR": ["vr", "ar", "virtual reality", "augmented reality"],
     "可重光照/逆渲染": ["relighting", "relightable", "relight", "光照编辑", "inverse rendering", "inverse-rendering", "inverse render", "inverse-render"],
     "3D人体/角色": ["avatar", "digital human", "character animation", "人体", "角色"],
-    "3DGS编辑": ["gaussian splatting edit", "3dgs edit"],
+    "3DGS编辑": ["gaussian splatting edit", "gaussian edit", "3dgs edit"],
     "3DGS水下建模": ["underwater", "水下", "underwater 3d"],
+    "空间智能": ["spatial reasoning", "scene understanding", "spatial intelligence"],
 }
 
 # 会议标签：仅在 categories/venue 中匹配（避免 abstract 中提及会议误标）
@@ -50,7 +55,7 @@ COMPANY_DIRECTION_LABELS: dict[str, str] = {
     "3d_gen": "3D重建/生成/渲染",
     "video_world": "视频/世界模型",
     "3d_design": "3D设计",
-    "llm": "多模态",
+    "llm": "大模型",
     "embodied": "具身智能",
 }
 
@@ -69,6 +74,14 @@ def _match_keywords(text: str, tag_keywords: dict[str, list[str]]) -> list[str]:
     return list(dict.fromkeys(tags))  # preserve order, dedupe
 
 
+def _has_3dgs_keyword(text: str) -> bool:
+    """Check if text contains any 3dgs-related keyword."""
+    if not text:
+        return False
+    tl = text.lower()
+    return any(kw.lower() in tl for kw in THREEDGS_KEYWORDS)
+
+
 def tag_paper(
     title: str,
     abstract: str,
@@ -81,6 +94,9 @@ def tag_paper(
     tags = []
     combined = f"{title or ''} {abstract or ''} {categories or ''} {keywords or ''}"
     tags.extend(_match_keywords(combined, PAPER_TAG_KEYWORDS))
+    # 3DGS 子标签：需同时包含 3dgs 关键词，否则移除
+    if not _has_3dgs_keyword(combined):
+        tags = [t for t in tags if t not in THREEDGS_REQUIRED_TAGS]
     # 会议标签：仅在 categories/venue 中匹配
     cats_venue = f"{categories or ''} {venue or ''}".lower()
     for conf, kws in CONFERENCE_TAG_KEYWORDS.items():
@@ -103,6 +119,8 @@ def tag_post(
     tags = []
     combined = f"{title or ''} {summary or ''}"
     tags.extend(_match_keywords(combined, POST_TAG_KEYWORDS))
+    if not _has_3dgs_keyword(combined):
+        tags = [t for t in tags if t not in THREEDGS_REQUIRED_TAGS]
     if source:
         sl = source.lower()
         if sl == "hn":
@@ -131,6 +149,8 @@ def tag_company_post(
     tags = []
     combined = f"{title or ''} {summary or ''}"
     tags.extend(_match_keywords(combined, POST_TAG_KEYWORDS))
+    if not _has_3dgs_keyword(combined):
+        tags = [t for t in tags if t not in THREEDGS_REQUIRED_TAGS]
     for direction, companies in company_directions.items():
         if channel in companies:
             label = COMPANY_DIRECTION_LABELS.get(direction, direction)

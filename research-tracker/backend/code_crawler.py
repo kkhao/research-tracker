@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS
+from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS
 from crawler import ARXIV_SEARCH_KEYWORDS
 
 GITHUB_API = "https://api.github.com/search/repositories"
@@ -152,6 +152,9 @@ def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) 
     # 选定标签：仅用该标签对应的关键词抓取
     if tag and tag.strip() and tag.strip() in POST_TAG_KEYWORDS:
         keywords = [k for k in POST_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
+        # 3dgs 子标签：搜索时附加 3dgs 约束（AND 语义）
+        if tag.strip() in THREEDGS_REQUIRED_TAGS and keywords:
+            keywords = [f"3dgs {k}" for k in keywords]
     else:
         keywords = load_crawl_keywords("community")
         if not keywords:
