@@ -94,6 +94,15 @@ research-tracker/
 4. 部署完成后，在 Service 的 **Settings** → **Networking** → **Generate Domain** 生成公网域名
 5. 访问 `https://你的域名/docs` 可查看 API 文档
 
+### 数据持久化（重要）
+
+Railway 容器重启或重新部署会清空 SQLite 数据库。**必须添加 Volume 才能保留数据**：
+
+1. 在 backend Service 中：**Command Palette** (`⌘K`) → **Add Volume**
+2. 选择挂载到当前 backend Service
+3. **Mount Path** 填：`/app/data`
+4. 部署后，Railway 会自动设置 `RAILWAY_VOLUME_MOUNT_PATH`，数据库会写入 `/app/data/papers.db` 并持久保存
+
 ### 方式二：前后端完整部署
 
 1. **后端**：新建 Service，连接同一仓库，Root Directory 留空（使用根目录 Dockerfile），生成域名

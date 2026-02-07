@@ -1,9 +1,16 @@
 """SQLite database setup and operations."""
+import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path(__file__).parent / "papers.db"
+# Railway: 若挂载了 Volume，Railway 会自动设置 RAILWAY_VOLUME_MOUNT_PATH
+_mount = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+if _mount:
+    Path(_mount).mkdir(parents=True, exist_ok=True)
+    DB_PATH = Path(_mount) / "papers.db"
+else:
+    DB_PATH = Path(__file__).parent / "papers.db"
 
 
 def _column_exists(cursor, table: str, column: str) -> bool:
