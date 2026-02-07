@@ -216,7 +216,7 @@ def _fetch_tag_papers(
                 "max_results": page_size,
             }
             try:
-                r = requests.get(ARXIV_API, params=params, timeout=20)
+                r = requests.get(ARXIV_API, params=params, timeout=60)
                 r.raise_for_status()
                 root = ET.fromstring(r.content)
             except Exception:
@@ -330,7 +330,7 @@ def _fetch_openreview_via_rest_v2(venue_id: str, venue_name: str, cutoff_ms: int
                     OPENREVIEW_API_V2,
                     params={"invitation": invitation, "limit": min(100, max_results - len(papers)), "offset": offset, "sort": "tcdate:desc"},
                     headers=OPENREVIEW_HEADERS,
-                    timeout=30,
+                    timeout=60,
                 )
                 r.raise_for_status()
                 data = r.json()
@@ -505,7 +505,7 @@ def fetch_openreview_papers(days: int = 15, max_results: int = 500, min_per_venu
                 }
                 try:
                     r = requests.get(
-                        OPENREVIEW_API, params=params, headers=OPENREVIEW_HEADERS, timeout=30
+                        OPENREVIEW_API, params=params, headers=OPENREVIEW_HEADERS, timeout=60
                     )
                     r.raise_for_status()
                     data = r.json()
@@ -598,7 +598,7 @@ def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> lis
             "fields": S2_FIELDS,
         }
         try:
-            r = requests.get(S2_API, params=params, timeout=30)
+            r = requests.get(S2_API, params=params, timeout=60)
             r.raise_for_status()
             data = r.json()
         except Exception:

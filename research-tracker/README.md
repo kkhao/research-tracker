@@ -112,8 +112,27 @@ Railway 容器重启或重新部署会清空 SQLite 数据库。**必须添加 V
 
 ## 定时更新
 
-可使用 Windows 任务计划程序或 cron 每日执行：
+### 方式一：外部 Cron（推荐，适合 Railway）
+
+使用 [cron-job.org](https://cron-job.org) 免费定时请求：
+
+1. 注册并创建 Job
+2. URL 填：`https://你的后端域名/api/refresh?days=15`
+3. 方法：POST
+4.  schedule：每日 1～2 次（如 `0 8 * * *` 每天 8:00 UTC）
+
+### 方式二：Railway 原生 Cron
+
+1. 新建 Service，连接同一仓库，Root Directory 留空（与 backend 相同）
+2. **Settings** → **Deploy** → **Custom Start Command** 填：`python run_cron_refresh.py`
+3. **Settings** → **Cron Schedule** 填：`0 8 * * *`（每天 8:00 UTC）
+4. **Variables** 添加：`BACKEND_URL=https://你的backend域名`
+5. 可选：`CRAWL_DAYS=15` 控制抓取天数
+
+### 方式三：本地
+
+Windows 任务计划程序或 cron 每日执行：
 
 ```powershell
-curl -X POST http://localhost:8000/api/refresh?days=7
+curl -X POST http://localhost:8000/api/refresh?days=15
 ```
