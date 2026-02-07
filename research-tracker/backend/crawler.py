@@ -66,6 +66,8 @@ OPENREVIEW_VENUES = [
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
 S2_FIELDS = "paperId,title,abstract,authors,publicationDate,year,venue,publicationVenue,citationCount,externalIds,url"
 S2_EARLY_EXIT = 250  # 达到此数量即停止，避免跑完所有关键词，提速且不牺牲覆盖
+S2_WORKERS = 3  # 并行请求数，避免触发 S2 限流（100 次/5 分钟）
+S2_TIMEOUT = 30
 S2_DEFAULT_QUERIES = [
     "3D vision",
     "world model",
@@ -572,92 +574,110 @@ def fetch_openreview_papers(days: int = 15, max_results: int = 500, min_per_venu
     return papers[:max_results]
 
 
+def _parse_s2_date(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _fetch_s2_single(
+    query: str,
+    limit: int,
+    cutoff: datetime,
+) -> list[dict]:
+    """Fetch papers for one S2 query. Returns list of paper dicts."""
+    params = {"query": query, "limit": limit, "fields": S2_FIELDS}
+    headers = {"User-Agent": "ResearchTracker/1.0"}
+    try:
+        r = requests.get(S2_API, params=params, headers=headers, timeout=S2_TIMEOUT)
+        r.raise_for_status()
+        data = r.json()
+    except Exception:
+        return []
+    result = []
+    for item in data.get("data", []):
+        paper_id = item.get("paperId")
+        if not paper_id:
+            continue
+        pub_date = item.get("publicationDate")
+        pub_dt = _parse_s2_date(pub_date)
+        if pub_dt and pub_dt < cutoff:
+            continue
+        authors = item.get("authors") or []
+        authors_str = ", ".join(a.get("name", "") for a in authors if a.get("name"))
+        affiliations = []
+        for a in authors:
+            for aff in (a.get("affiliations") or []):
+                if aff:
+                    affiliations.append(aff)
+        affiliations_str = ", ".join(sorted(set(affiliations)))
+        external_ids = item.get("externalIds") or {}
+        doi = external_ids.get("DOI")
+        arxiv_id = external_ids.get("ArXiv")
+        url = item.get("url") or ""
+        if arxiv_id:
+            url = url or f"https://arxiv.org/abs/{arxiv_id}"
+        venue = ""
+        publication_venue = item.get("publicationVenue") or {}
+        if isinstance(publication_venue, dict):
+            venue = publication_venue.get("name") or ""
+        venue = venue or item.get("venue") or "Semantic Scholar"
+        citation_count = item.get("citationCount")
+        result.append({
+            "id": f"s2:{paper_id}",
+            "title": (item.get("title") or "").replace("\n", " "),
+            "abstract": (item.get("abstract") or "").replace("\n", " "),
+            "authors": authors_str,
+            "categories": venue,
+            "pdf_url": "",
+            "arxiv_url": url,
+            "published_at": pub_date or (f"{item.get('year')}-01-01" if item.get("year") else ""),
+            "source": "s2",
+            "doi": doi,
+            "url": url,
+            "affiliations": affiliations_str,
+            "keywords": query,
+            "venue": venue,
+            "citation_count": citation_count,
+            "updated_at": None,
+        })
+    return result
+
+
 def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> list[dict]:
-    """Fetch recent papers from Semantic Scholar (public Graph API)."""
+    """Fetch recent papers from Semantic Scholar (public Graph API). Parallel requests with S2_WORKERS."""
     papers = []
     seen_ids = set()
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-
-    def _parse_date(value: str | None) -> datetime | None:
-        if not value:
-            return None
-        try:
-            return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-        except ValueError:
-            return None
 
     queries = load_crawl_keywords("papers")
     if not queries:
         queries = _load_s2_queries()
     if not queries:
-        # 与 arXiv 统一：无自定义配置时使用相同关键词
         queries = ARXIV_SEARCH_KEYWORDS
     if not queries:
         queries = S2_DEFAULT_QUERIES
 
-    for query in queries:
+    for i in range(0, len(queries), S2_WORKERS):
         if len(papers) >= max_results or len(papers) >= S2_EARLY_EXIT:
             break
-        params = {
-            "query": query,
-            "limit": min(50, max_results - len(papers)),
-            "fields": S2_FIELDS,
-        }
-        try:
-            r = requests.get(S2_API, params=params, timeout=60)
-            r.raise_for_status()
-            data = r.json()
-        except Exception:
-            continue
-
-        for item in data.get("data", []):
-            paper_id = item.get("paperId")
-            if not paper_id or paper_id in seen_ids:
-                continue
-            pub_date = item.get("publicationDate")
-            pub_dt = _parse_date(pub_date)
-            if pub_dt and pub_dt < cutoff:
-                continue
-            authors = item.get("authors") or []
-            authors_str = ", ".join(a.get("name", "") for a in authors if a.get("name"))
-            affiliations = []
-            for a in authors:
-                for aff in (a.get("affiliations") or []):
-                    if aff:
-                        affiliations.append(aff)
-            affiliations_str = ", ".join(sorted(set(affiliations)))
-            external_ids = item.get("externalIds") or {}
-            doi = external_ids.get("DOI")
-            arxiv_id = external_ids.get("ArXiv")
-            url = item.get("url") or ""
-            if arxiv_id:
-                url = url or f"https://arxiv.org/abs/{arxiv_id}"
-            venue = ""
-            publication_venue = item.get("publicationVenue") or {}
-            if isinstance(publication_venue, dict):
-                venue = publication_venue.get("name") or ""
-            venue = venue or item.get("venue") or "Semantic Scholar"
-            citation_count = item.get("citationCount")
-
-            papers.append({
-                "id": f"s2:{paper_id}",
-                "title": (item.get("title") or "").replace("\n", " "),
-                "abstract": (item.get("abstract") or "").replace("\n", " "),
-                "authors": authors_str,
-                "categories": venue,
-                "pdf_url": "",
-                "arxiv_url": url,
-                "published_at": pub_date or (f"{item.get('year')}-01-01" if item.get("year") else ""),
-                "source": "s2",
-                "doi": doi,
-                "url": url,
-                "affiliations": affiliations_str,
-                "keywords": query,
-                "venue": venue,
-                "citation_count": citation_count,
-                "updated_at": None,
-            })
-            seen_ids.add(paper_id)
+        batch = queries[i : i + S2_WORKERS]
+        limit = min(50, max_results - len(papers))
+        with ThreadPoolExecutor(max_workers=S2_WORKERS) as ex:
+            futures = {
+                ex.submit(_fetch_s2_single, q, limit, cutoff): q
+                for q in batch
+            }
+            for future in as_completed(futures):
+                batch_papers = future.result()
+                for p in batch_papers:
+                    pid = p["id"]
+                    if pid not in seen_ids:
+                        seen_ids.add(pid)
+                        papers.append(p)
 
     papers.sort(key=lambda x: x["published_at"] or "", reverse=True)
     return papers[:max_results]
