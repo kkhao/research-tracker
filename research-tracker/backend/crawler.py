@@ -196,10 +196,10 @@ def _fetch_tag_papers(
     seen_ids: set,
     lock: threading.Lock,
     page_size: int = 50,
-    max_pages_per_query: int = 2,
-    max_queries_per_tag: int = 10,
+    max_pages_per_query: int = 3,
+    max_queries_per_tag: int = 20,
 ) -> None:
-    """单标签抓取（供并行调用）。按关键词批次查询，合并去重。每关键词最多2页，每标签最多10条查询。"""
+    """单标签抓取（供并行调用）。按关键词批次查询，合并去重。每关键词最多3页，每标签最多20条查询。"""
     tag_count = 0
     for i, search_query in enumerate(search_queries):
         if tag_count >= max_per_tag or i >= max_queries_per_tag:
@@ -278,8 +278,8 @@ def fetch_recent_papers(
         if not valid_kws:
             continue
         require_3dgs = t in THREEDGS_REQUIRED_TAGS and t not in SEARCH_WITHOUT_3DGS_PREFIX
-        # 每 2-3 个关键词合并为一条查询，减少请求数；轮询至多 10 条
-        BATCH_SIZE = 3
+        # 每 2 个关键词合并为一条查询，每标签最多 20 条，保证更多关键词参与
+        BATCH_SIZE = 2
         search_queries = []
         for i in range(0, len(valid_kws), BATCH_SIZE):
             batch = valid_kws[i : i + BATCH_SIZE]
