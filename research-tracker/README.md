@@ -119,7 +119,8 @@ Railway 容器重启或重新部署会清空 SQLite 数据库。**必须添加 V
 1. 注册并创建 Job
 2. URL 填：`https://你的后端域名/api/refresh?days=15`
 3. 方法：POST
-4.  schedule：每日 1～2 次（如 `0 8 * * *` 每天 8:00 UTC）
+4. schedule：每日 1～2 次（如 `0 8 * * *` 每天 8:00 UTC）
+5. 可选：新建一个 Job 每 10 分钟请求 `GET https://你的后端域名/api/health`，可减少 Railway 冷启动导致的首次加载失败
 
 ### 方式二：Railway 原生 Cron
 

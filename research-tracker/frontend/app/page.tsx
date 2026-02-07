@@ -132,7 +132,11 @@ export default function Home() {
 
   const fetchPapers = async (effective: typeof filters, retryCount = 0) => {
     setError(null);
-    const maxRetries = 2;
+    const maxRetries = 4;
+    const retryDelayMs = 5000;
+    const fetchTimeoutMs = 60000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), fetchTimeoutMs);
     try {
       const params = new URLSearchParams();
       if (effective.category) params.set("category", effective.category);
@@ -151,7 +155,8 @@ export default function Home() {
       if (effective.min_citations) params.set("min_citations", effective.min_citations);
       params.set("limit", "500");
 
-      const res = await fetch(`${API_BASE}/api/papers?${params}`);
+      const res = await fetch(`${API_BASE}/api/papers?${params}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         setPapers(data);
@@ -161,11 +166,15 @@ export default function Home() {
       }
       setLoading(false);
     } catch (e) {
+      clearTimeout(timeoutId);
       if (retryCount < maxRetries) {
-        setTimeout(() => fetchPapers(effective, retryCount + 1), 2000);
+        setTimeout(() => fetchPapers(effective, retryCount + 1), retryDelayMs);
         return;
       }
-      setError(`无法连接后端 (${API_BASE})，请检查 NEXT_PUBLIC_API_URL 是否配置正确`);
+      const hint = (e instanceof Error && e.name === "AbortError")
+        ? "请求超时。Railway 冷启动可能较慢，请稍后刷新重试。"
+        : "";
+      setError(`无法连接后端 (${API_BASE})。${hint}请检查 NEXT_PUBLIC_API_URL 是否配置正确`);
       setPapers([]);
       setLoading(false);
     }
