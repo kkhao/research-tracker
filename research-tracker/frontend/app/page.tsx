@@ -176,8 +176,16 @@ export default function Home() {
         const data = await res.json();
         setPapers(data);
       } else {
-        const url = `${API_BASE}/api/papers`;
-        setError(`请求失败: ${res.status}。请检查 ${url} 是否可访问`);
+        const text = await res.text();
+        let detail = "";
+        try {
+          const j = JSON.parse(text);
+          detail = j.detail || j.error || "";
+        } catch {
+          detail = text.slice(0, 200);
+        }
+        const url = API_DISPLAY.includes("localhost") ? `${API_BASE}/api/papers` : `${API_DISPLAY}/api/papers`;
+        setError(`请求失败: ${res.status}。${detail ? `详情: ${detail}` : ""} 请检查 ${url} 是否可访问`);
       }
       setLoading(false);
     } catch (e) {

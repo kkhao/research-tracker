@@ -4,8 +4,6 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> }
@@ -41,18 +39,20 @@ async function proxy(
 ) {
   const path = params.path?.join("/") || "";
   const url = new URL(request.url);
-  const backendUrl = `${BACKEND.replace(/\/$/, "")}/${path}${url.search}`;
+  const backend = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const base = backend.replace(/\/$/, "");
+  const targetUrl = path ? `${base}/${path}${url.search}` : `${base}${url.search}`;
   try {
-    const headers = new Headers();
-    request.headers.forEach((v, k) => {
-      if (
-        !["host", "connection", "content-length"].includes(k.toLowerCase())
-      ) {
-        headers.set(k, v);
-      }
-    });
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "User-Agent": "ResearchTracker-Proxy/1.0",
+    };
+    if (method !== "GET") {
+      const ct = request.headers.get("Content-Type");
+      if (ct) headers["Content-Type"] = ct;
+    }
     const body = method !== "GET" ? await request.text() : undefined;
-    const res = await fetch(backendUrl, {
+    const res = await fetch(targetUrl, {
       method,
       headers,
       body: body || undefined,
@@ -67,7 +67,7 @@ async function proxy(
       },
     });
   } catch (e) {
-    console.error("[proxy]", backendUrl, e);
+    console.error("[proxy]", targetUrl, e);
     return NextResponse.json(
       { error: "Proxy failed", detail: String(e) },
       { status: 502 }
