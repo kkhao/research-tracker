@@ -197,7 +197,7 @@ def _fetch_tag_papers(
     papers: list,
     seen_ids: set,
     lock: threading.Lock,
-    page_size: int = 25,
+    page_size: int = 50,
     max_pages: int = 10,
 ) -> None:
     """单标签抓取（供并行调用）。"""
@@ -282,7 +282,7 @@ def fetch_recent_papers(
         search_query = f"({query})+AND+{date_range}"
         tasks.append((t, search_query))
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(
                 _fetch_tag_papers,
