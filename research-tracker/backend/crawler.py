@@ -78,12 +78,19 @@ S2_DEFAULT_QUERIES = [
     "augmented reality",
     "relighting",
     "inverse rendering",
+    "svbrdf",
+    "reflectance decomposition",
     "3D reconstruction",
     "3D generation",
     "human avatar",
     "character animation",
     "Gaussian splatting editing",
+    "editable gaussian",
+    "3D scene editing gaussian",
     "underwater 3D reconstruction",
+    "underwater gaussian splatting",
+    "3D scene understanding",
+    "open-vocabulary 3D",
 ]
 
 

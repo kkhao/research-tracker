@@ -700,7 +700,6 @@ export default function Home() {
                   <option value="3DGS">3DGS</option>
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="具身智能">具身智能</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
@@ -720,7 +719,6 @@ export default function Home() {
                   <option value="3DGS">3DGS</option>
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="具身智能">具身智能</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
@@ -799,7 +797,6 @@ export default function Home() {
                   <option value="3DGS">3DGS</option>
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="具身智能">具身智能</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
@@ -819,7 +816,6 @@ export default function Home() {
                   <option value="3DGS">3DGS</option>
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="具身智能">具身智能</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="VR/AR">VR/AR</option>
                   <option value="可重光照/逆渲染">可重光照/逆渲染</option>
@@ -891,7 +887,7 @@ export default function Home() {
                   <option value="video_world">视频/世界模型</option>
                   <option value="3d_design">3D设计</option>
                   <option value="llm">大模型</option>
-                  <option value="embodied">具身智能</option>
+                  <option value="embodied">机器人</option>
                 </select>
                 <select
                   value={companyFilters.tag}
@@ -905,7 +901,6 @@ export default function Home() {
                   <option value="3DGS">3DGS</option>
                   <option value="视频/世界模型">视频/世界模型</option>
                   <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="具身智能">具身智能</option>
                   <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
                   <option value="3D设计">3D设计</option>
                   <option value="VR/AR">VR/AR</option>

@@ -10,9 +10,9 @@
 
 ### 变更
 
-- **3dgs 子标签约束**：3DGS物理仿真、具身智能、VR/AR、3DGS水下建模、空间智能 打标时需**同时**包含 3dgs 相关词，抓取时自动附加 3dgs AND 约束，避免误标/误抓非 3DGS 论文
+- **3dgs 子标签约束**：3DGS物理仿真、VR/AR、3DGS水下建模、空间智能 打标时需**同时**包含 3dgs 相关词，抓取时自动附加 3dgs AND 约束，避免误标/误抓非 3DGS 论文
 - **新增标签**：空间智能（spatial reasoning, scene understanding, spatial understanding, spatial perception, spatial intelligence），需同时含 3dgs
-- **移除标签**：多模态。公司方向 llm 改为展示「大模型」
+- **移除标签**：多模态、具身智能。公司方向 llm→大模型，embodied→机器人
 - 社区动态时间范围调整为**近一周 / 近两周 / 近一个月**（7/14/30 天），不再支持近 90 天和全部
 - 社区动态抓取默认 `days` 改为 7
 

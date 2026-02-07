@@ -3,40 +3,75 @@ import re
 from typing import Sequence
 
 # 3DGS 相关关键词：以下标签需同时匹配 3dgs + 该标签关键词，才打标
-THREEDGS_KEYWORDS = ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian", "gaussian splatting"]
+THREEDGS_KEYWORDS = ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian", "gaussian splatting", "neural gaussian"]
 # 需同时包含 3dgs 的标签
-THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "具身智能", "VR/AR", "3DGS水下建模", "空间智能"})
+THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "VR/AR", "3DGS水下建模", "空间智能"})
 # 以下标签抓取时不加 3dgs 前缀（组合搜索过窄易返回空，打标仍需 3dgs）
 SEARCH_WITHOUT_3DGS_PREFIX = frozenset({"空间智能"})
 
 # 研究方向标签：tag -> 匹配关键词（title/abstract/summary 中不区分大小写）
 PAPER_TAG_KEYWORDS: dict[str, list[str]] = {
-    "3DGS": ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian"],
-    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model"],
-    "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method"],
-    "具身智能": ["embodied ai", "embodied intelligence", "robot", "robotics"],
-    "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "3d render"],
-    "VR/AR": ["virtual reality", "augmented reality", "vr ", " ar ", "mixed reality"],
-    "可重光照/逆渲染": ["relighting", "relightable", "relight", "lighting editing", "光照编辑", "inverse rendering", "inverse-rendering", "inverse render", "inverse-render"],
+    "3DGS": ["3d gaussian", "3d gaussian splatting", "3dgs", "4d gaussian", "4d gaussian splatting", "4dgs", "gaussian splatting", "dynamic gaussian", "neural gaussian"],
+    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model", "text-to-video", "image-to-video", "video diffusion", "generative world model", "aigc", "生成式ai", "video prediction", "world simulation"],
+    "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method", "physics-integrated", "generative dynamics", "spring-mass", "elastic", "granular", "fluid simulation", "continuum mechanics", "physics-based simulation"],
+    "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "3d render", "text-to-3d", "image-to-3d", "novel view synthesis", "view synthesis", "3d scene generation", "3d scene reconstruction", "mesh generation", "radiance field", "neural rendering", "multi-view 3d"],
+    "VR/AR": ["virtual reality", "augmented reality", "vr ", " ar ", "mixed reality", "extended reality", "xr", "spatial computing", "immersive", "head-mounted", "metaverse", "passthrough", "foveated rendering"],
+    "可重光照/逆渲染": [
+        "relighting", "relightable", "relight", "lighting editing", "光照编辑",
+        "inverse rendering", "inverse-rendering", "inverse render", "inverse-render",
+        "svbrdf", "reflectance decomposition", "neural reflectance",
+        "material editing", "illumination estimation", "generative relighting",
+        "relightable 3d", "environment map", "spatially-varying lighting",
+        "intrinsic decomposition",
+    ],
     "3D人体/角色": ["human avatar", "character animation", "3d human", "digital human", "人体建模", "角色动画"],
-    "3DGS编辑": ["gaussian splatting edit", "gaussian edit", "3dgs edit", "splat editing"],
-    "3DGS水下建模": ["underwater", "水下", "underwater 3d"],
-    "空间智能": ["spatial reasoning", "scene understanding", "spatial understanding", "spatial perception", "spatial intelligence"],
+    "3DGS编辑": [
+        "gaussian splatting edit", "gaussian edit", "3dgs edit", "splat editing",
+        "3d scene editing", "editable gaussian", "gaussian stylization",
+        "gaussian manipulation", "text-guided 3d editing",
+    ],
+    "3DGS水下建模": [
+        "underwater", "水下", "underwater 3d",
+        "underwater reconstruction", "underwater scene", "underwater scene reconstruction",
+        "水下场景", "水下重建",
+    ],
+    "空间智能": [
+        "spatial reasoning", "scene understanding", "spatial understanding", "spatial perception", "spatial intelligence",
+        "3d scene understanding", "open-vocabulary 3d", "open-vocabulary scene understanding",
+        "3d semantic segmentation", "language-guided 3d",
+    ],
 }
 
 # 社区/公司通用关键词
 POST_TAG_KEYWORDS: dict[str, list[str]] = {
-    "3DGS": ["3d gaussian", "3dgs", "gaussian splatting", "4d gaussian", "4dgs", "4d gaussian splatting"],
-    "视频/世界模型": ["world model", "video generation", "video synthesis", "gen-3", "sora", "runway", "pika"],
-    "3DGS物理仿真": ["physics simulation", "physical simulation", "mpm", "material point method"],
-    "具身智能": ["embodied", "robot", "robotics", "figure"],
-    "3D重建/生成/渲染": ["3d generation", "3d gen", "3d reconstruction", "3d rendering", "tripo", "meshy", "luma", "wonder3d"],
-    "VR/AR": ["vr", "ar", "virtual reality", "augmented reality"],
-    "可重光照/逆渲染": ["relighting", "relightable", "relight", "光照编辑", "inverse rendering", "inverse-rendering", "inverse render", "inverse-render"],
-    "3D人体/角色": ["avatar", "digital human", "character animation", "人体", "角色"],
-    "3DGS编辑": ["gaussian splatting edit", "gaussian edit", "3dgs edit"],
-    "3DGS水下建模": ["underwater", "水下", "underwater 3d"],
-    "空间智能": ["spatial reasoning", "scene understanding", "spatial intelligence"],
+    "3DGS": ["3d gaussian", "3d gaussian splatting", "3dgs", "4d gaussian", "4d gaussian splatting", "4dgs", "gaussian splatting", "dynamic gaussian", "neural gaussian"],
+    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model", "text-to-video", "image-to-video", "video diffusion", "generative world model", "aigc", "生成式ai", "video prediction", "world simulation", "gen-3", "sora", "runway", "pika"],
+    "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method", "physics-integrated", "generative dynamics", "spring-mass", "elastic", "granular", "fluid simulation", "continuum mechanics", "physics-based simulation"],
+    "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "text-to-3d", "image-to-3d", "novel view synthesis", "view synthesis", "3d scene generation", "3d scene reconstruction", "mesh generation", "radiance field", "neural rendering", "multi-view 3d", "tripo", "meshy", "luma", "wonder3d"],
+    "VR/AR": ["vr", "ar", "virtual reality", "augmented reality", "mixed reality", "extended reality", "xr", "spatial computing", "immersive", "head-mounted", "metaverse", "passthrough", "foveated rendering", "vision pro"],
+    "可重光照/逆渲染": [
+        "relighting", "relightable", "relight", "lighting editing", "光照编辑",
+        "inverse rendering", "inverse-rendering", "inverse render", "inverse-render",
+        "svbrdf", "reflectance decomposition", "neural reflectance", "material editing",
+        "illumination estimation", "generative relighting", "relightable 3d",
+        "environment map", "spatially-varying lighting", "intrinsic decomposition",
+    ],
+    "3D人体/角色": ["avatar", "human avatar", "digital human", "character animation", "3d human", "人体", "角色", "人体建模", "角色动画"],
+    "3DGS编辑": [
+        "gaussian splatting edit", "gaussian edit", "3dgs edit", "splat editing",
+        "3d scene editing", "editable gaussian", "gaussian stylization",
+        "gaussian manipulation", "text-guided 3d editing",
+    ],
+    "3DGS水下建模": [
+        "underwater", "水下", "underwater 3d",
+        "underwater reconstruction", "underwater scene", "underwater scene reconstruction",
+        "水下场景", "水下重建",
+    ],
+    "空间智能": [
+        "spatial reasoning", "scene understanding", "spatial understanding", "spatial perception", "spatial intelligence",
+        "3d scene understanding", "open-vocabulary 3d", "open-vocabulary scene understanding",
+        "3d semantic segmentation", "language-guided 3d",
+    ],
 }
 
 # 会议标签：仅在 categories/venue 中匹配（避免 abstract 中提及会议误标）
@@ -58,7 +93,7 @@ COMPANY_DIRECTION_LABELS: dict[str, str] = {
     "video_world": "视频/世界模型",
     "3d_design": "3D设计",
     "llm": "大模型",
-    "embodied": "具身智能",
+    "embodied": "机器人",
 }
 
 

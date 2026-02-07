@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import requests
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS, SEARCH_WITHOUT_3DGS_PREFIX
+from tagging import tag_post, tags_to_str, PAPER_TAG_KEYWORDS, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS, SEARCH_WITHOUT_3DGS_PREFIX
 from crawler import ARXIV_SEARCH_KEYWORDS
 
 GITHUB_API = "https://api.github.com/search/repositories"
@@ -124,7 +124,7 @@ def _normalize_url(url: str) -> str:
 def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) -> int:
     """Fetch GitHub and Hugging Face posts and store in DB.
     days: only fetch items created in last N days (30/90). None = no filter (all).
-    tag: when set, only use keywords for this tag (from POST_TAG_KEYWORDS). Enables 选定标签->选定时间 抓取.
+    tag: when set, only use keywords for this tag (from PAPER_TAG_KEYWORDS). Enables 选定标签->选定时间 抓取.
     """
     init_db()
     all_posts = []
@@ -149,9 +149,9 @@ def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) 
             seen_urls.add(norm_url)
         all_posts.append(p)
 
-    # 选定标签：仅用该标签对应的关键词抓取
-    if tag and tag.strip() and tag.strip() in POST_TAG_KEYWORDS:
-        keywords = [k for k in POST_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
+    # 选定标签：用论文关键词抓取（更全，与论文抓取一致）
+    if tag and tag.strip() and tag.strip() in PAPER_TAG_KEYWORDS:
+        keywords = [k for k in PAPER_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
         # 3dgs 子标签：搜索时附加 3dgs 约束；空间智能不加（组合过窄易返回空，打标仍需 3dgs）
         if tag.strip() in THREEDGS_REQUIRED_TAGS and tag.strip() not in SEARCH_WITHOUT_3DGS_PREFIX and keywords:
             keywords = [f"3dgs {k}" for k in keywords]

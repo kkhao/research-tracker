@@ -41,7 +41,6 @@ const TAG_CLASSES: Record<string, string> = {
   "3DGS": "tag-3dgs",
   "视频/世界模型": "tag-video-world",
   "3DGS物理仿真": "tag-physics",
-  "具身智能": "tag-embodied",
   "3D重建/生成/渲染": "tag-3dgen",
   "VR/AR": "tag-vr",
   "3D设计": "tag-3ddesign",
@@ -51,6 +50,7 @@ const TAG_CLASSES: Record<string, string> = {
   "3DGS水下建模": "tag-underwater",
   "空间智能": "tag-spatial",
   "大模型": "tag-default",
+  "机器人": "tag-default",
 };
 
 function getTagClass(tag: string): string {

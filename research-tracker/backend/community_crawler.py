@@ -9,7 +9,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 import requests
 from datetime import datetime, timedelta
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS, SEARCH_WITHOUT_3DGS_PREFIX
+from tagging import tag_post, tags_to_str, PAPER_TAG_KEYWORDS, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS, SEARCH_WITHOUT_3DGS_PREFIX
 from crawler import ARXIV_SEARCH_KEYWORDS
 
 HN_API = "https://hn.algolia.com/api/v1/search"
@@ -230,9 +230,9 @@ def fetch_and_store_posts(
             seen_urls.add(norm_url)
         all_posts.append(p)
 
-    # 选定标签：仅用该标签对应的关键词（HN/YouTube）；Reddit 无关键词搜索，按标签时跳过
-    if tag and tag.strip() and tag.strip() in POST_TAG_KEYWORDS:
-        keywords = [k for k in POST_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
+    # 选定标签：用论文关键词抓取（更全，与论文抓取一致）；Reddit 无关键词搜索，按标签时跳过
+    if tag and tag.strip() and tag.strip() in PAPER_TAG_KEYWORDS:
+        keywords = [k for k in PAPER_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
         # 3dgs 子标签：搜索时附加 3dgs 约束；空间智能不加（组合过窄易返回空，打标仍需 3dgs）
         if tag.strip() in THREEDGS_REQUIRED_TAGS and tag.strip() not in SEARCH_WITHOUT_3DGS_PREFIX and keywords:
             keywords = [f"3dgs {k}" for k in keywords]
@@ -245,7 +245,7 @@ def fetch_and_store_posts(
 
     src = (source or "").strip().lower() if source else ""
     fetch_hn = not src or src == "hn"
-    fetch_reddit = (not src or src == "reddit") and (not tag or not tag.strip() or tag.strip() not in POST_TAG_KEYWORDS)
+    fetch_reddit = (not src or src == "reddit") and (not tag or not tag.strip() or tag.strip() not in PAPER_TAG_KEYWORDS)
     fetch_youtube = not src or src == "youtube"
 
     def _fetch_hn_batch():
