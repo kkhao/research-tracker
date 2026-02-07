@@ -150,6 +150,7 @@ export default function Home() {
     to_date: "",
     min_citations: "",
   });
+  const [fetchSource, setFetchSource] = useState<"all" | "arxiv" | "s2">("all");
 
   const debouncedSearch = useDebounce(filters.search, 300);
   const debouncedAuthor = useDebounce(filters.author, 300);
@@ -502,6 +503,7 @@ export default function Home() {
       const params = new URLSearchParams();
       params.set("days", String(filters.days));
       if (filters.tag) params.set("tag", filters.tag);
+      if (fetchSource !== "all") params.set("source", fetchSource);
       const res = await fetchApi(`/api/refresh?${params}`, {
         method: "POST",
         signal: controller.signal,
@@ -736,12 +738,21 @@ export default function Home() {
             {activeTab === "papers" && (
               <div className="flex flex-wrap items-center gap-3 flex-1">
                 <Filters filters={filters} onChange={setFilters} section="main" />
+                <select
+                  value={fetchSource}
+                  onChange={(e) => setFetchSource(e.target.value as "all" | "arxiv" | "s2")}
+                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                >
+                  <option value="all">拉取全部</option>
+                  <option value="arxiv">仅 arXiv</option>
+                  <option value="s2">仅 S2</option>
+                </select>
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
                   className={`${btnBase} ${btnSecondary} shrink-0`}
                 >
-                  {refreshing ? "抓取中…" : "从 arXiv 更新"}
+                  {refreshing ? "抓取中…" : "更新论文"}
                 </button>
               </div>
             )}
