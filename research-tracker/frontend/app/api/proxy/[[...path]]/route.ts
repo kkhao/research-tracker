@@ -42,6 +42,11 @@ async function proxy(
   const backend = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const base = backend.replace(/\/$/, "");
   const targetUrl = path ? `${base}/${path}${url.search}` : `${base}${url.search}`;
+
+  if (!process.env.BACKEND_URL && !process.env.NEXT_PUBLIC_API_URL && backend.includes("localhost")) {
+    console.warn("[proxy] BACKEND_URL and NEXT_PUBLIC_API_URL not set; using localhost. Set them in Railway Variables for production.");
+  }
+
   try {
     const headers: Record<string, string> = {
       Accept: "application/json",
@@ -68,8 +73,12 @@ async function proxy(
     });
   } catch (e) {
     console.error("[proxy]", targetUrl, e);
+    const hint =
+      !backend || backend.includes("localhost")
+        ? "Set BACKEND_URL and NEXT_PUBLIC_API_URL in Railway frontend Variables to your backend URL (e.g. https://xxx.up.railway.app)."
+        : "Backend unreachable. Check BACKEND_URL and that the backend service is running.";
     return NextResponse.json(
-      { error: "Proxy failed", detail: String(e) },
+      { error: "Proxy failed", detail: String(e), hint },
       { status: 502 }
     );
   }

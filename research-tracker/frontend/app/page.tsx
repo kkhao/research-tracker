@@ -13,6 +13,16 @@ const API_BASE =
     : "/api/proxy";
 const API_DISPLAY = _API_URL;
 
+async function fetchApi(path: string, opts?: RequestInit): Promise<Response> {
+  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+  let res = await fetch(url, opts);
+  if (res.status === 502 && API_BASE === "/api/proxy" && _API_URL.startsWith("http")) {
+    const direct = `${_API_URL.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+    res = await fetch(direct, opts);
+  }
+  return res;
+}
+
 export interface Paper {
   id: string;
   title: string;
@@ -144,7 +154,7 @@ export default function Home() {
       try {
         const hc = new AbortController();
         const ht = setTimeout(() => hc.abort(), 10000);
-        await fetch(`${API_BASE}/api/health`, { signal: hc.signal });
+        await fetchApi(`/api/health`, { signal: hc.signal });
         clearTimeout(ht);
       } catch {
         /* warm-up: health check may wake Railway; continue to papers */
@@ -170,7 +180,7 @@ export default function Home() {
       if (effective.min_citations) params.set("min_citations", effective.min_citations);
       params.set("limit", "100");
 
-      const res = await fetch(`${API_BASE}/api/papers?${params}`, { signal: controller.signal });
+      const res = await fetchApi(`/api/papers?${params}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
@@ -231,7 +241,7 @@ export default function Home() {
   ]);
 
   const fetchNotifications = async () => {
-    const res = await fetch(`${API_BASE}/api/notifications?unread=true&limit=20`);
+    const res = await fetchApi(`/api/notifications?unread=true&limit=20`);
     if (res.ok) {
       const data = await res.json();
       setNotifications(data);
@@ -239,7 +249,7 @@ export default function Home() {
   };
 
   const fetchSubscriptions = async () => {
-    const res = await fetch(`${API_BASE}/api/subscriptions`);
+    const res = await fetchApi(`/api/subscriptions`);
     if (res.ok) {
       const data = await res.json();
       setSubscriptions(data);
@@ -247,7 +257,7 @@ export default function Home() {
   };
 
   const fetchS2Queries = async () => {
-    const res = await fetch(`${API_BASE}/api/s2-queries`);
+    const res = await fetchApi(`/api/s2-queries`);
     if (res.ok) {
       const data = await res.json();
       setS2Queries(data);
@@ -255,7 +265,7 @@ export default function Home() {
   };
 
   const fetchCrawlKeywords = async () => {
-    const res = await fetch(`${API_BASE}/api/crawl-keywords`);
+    const res = await fetchApi(`/api/crawl-keywords`);
     if (res.ok) {
       const data = await res.json();
       setCrawlKeywords(data);
@@ -279,7 +289,7 @@ export default function Home() {
       params.set("days", String(codeFilters.days));
       if (codeFilters.sort === "star") params.set("sort", "star");
       params.set("limit", "200");
-      const res = await fetch(`${API_BASE}/api/posts?${params}`);
+      const res = await fetchApi(`/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
         setPosts(data);
@@ -308,7 +318,7 @@ export default function Home() {
       if (postFilters.tag) params.set("tag", postFilters.tag);
       params.set("days", String(postFilters.days));
       params.set("limit", "200");
-      const res = await fetch(`${API_BASE}/api/posts?${params}`);
+      const res = await fetchApi(`/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
         setPosts(data);
@@ -338,7 +348,7 @@ export default function Home() {
       if (companyFilters.tag) params.set("tag", companyFilters.tag);
       params.set("days", String(companyFilters.days));
       params.set("limit", "200");
-      const res = await fetch(`${API_BASE}/api/posts?${params}`);
+      const res = await fetchApi(`/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
         setPosts(data);
@@ -398,7 +408,7 @@ export default function Home() {
         params.set("tag", codeFilters.tag);
       }
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const res = await fetch(`${API_BASE}/api/refresh-code${qs}`, { method: "POST" });
+      const res = await fetchApi(`/api/refresh-code${qs}`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.status === "ok") {
         const fetched = await fetchCodePosts();
@@ -423,7 +433,7 @@ export default function Home() {
       params.set("days", String(postFilters.days));
       if (postFilters.tag) params.set("tag", postFilters.tag);
       if (postFilters.source) params.set("source", postFilters.source);
-      const res = await fetch(`${API_BASE}/api/refresh-posts?${params}`, {
+      const res = await fetchApi(`/api/refresh-posts?${params}`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));
@@ -446,7 +456,7 @@ export default function Home() {
     setPostsRefreshing(true);
     setPostsError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/refresh-company-posts?days=90`, {
+      const res = await fetchApi(`/api/refresh-company-posts?days=90`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));
@@ -478,7 +488,7 @@ export default function Home() {
       const params = new URLSearchParams();
       params.set("days", String(filters.days));
       if (filters.tag) params.set("tag", filters.tag);
-      const res = await fetch(`${API_BASE}/api/refresh?${params}`, {
+      const res = await fetchApi(`/api/refresh?${params}`, {
         method: "POST",
         signal: controller.signal,
       });
@@ -513,7 +523,7 @@ export default function Home() {
 
   const addSubscription = async () => {
     if (!newSubValue.trim()) return;
-    const res = await fetch(`${API_BASE}/api/subscriptions`, {
+    const res = await fetchApi(`/api/subscriptions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: newSubType, value: newSubValue.trim() }),
@@ -525,7 +535,7 @@ export default function Home() {
   };
 
   const toggleSubscription = async (sub: Subscription) => {
-    const res = await fetch(`${API_BASE}/api/subscriptions/${sub.id}`, {
+    const res = await fetchApi(`/api/subscriptions/${sub.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !sub.active }),
@@ -536,7 +546,7 @@ export default function Home() {
   };
 
   const deleteSubscription = async (sub: Subscription) => {
-    const res = await fetch(`${API_BASE}/api/subscriptions/${sub.id}`, {
+    const res = await fetchApi(`/api/subscriptions/${sub.id}`, {
       method: "DELETE",
     });
     if (res.ok) {
@@ -545,7 +555,7 @@ export default function Home() {
   };
 
   const markNotificationRead = async (note: NotificationItem) => {
-    const res = await fetch(`${API_BASE}/api/notifications/${note.id}/read`, {
+    const res = await fetchApi(`/api/notifications/${note.id}/read`, {
       method: "PATCH",
     });
     if (res.ok) {
@@ -555,7 +565,7 @@ export default function Home() {
 
   const addS2Query = async () => {
     if (!newS2Query.trim()) return;
-    const res = await fetch(`${API_BASE}/api/s2-queries`, {
+    const res = await fetchApi(`/api/s2-queries`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: newS2Query.trim() }),
@@ -567,7 +577,7 @@ export default function Home() {
   };
 
   const toggleS2Query = async (q: S2Query) => {
-    const res = await fetch(`${API_BASE}/api/s2-queries/${q.id}`, {
+    const res = await fetchApi(`/api/s2-queries/${q.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !q.active }),
@@ -578,7 +588,7 @@ export default function Home() {
   };
 
   const deleteS2Query = async (q: S2Query) => {
-    const res = await fetch(`${API_BASE}/api/s2-queries/${q.id}`, {
+    const res = await fetchApi(`/api/s2-queries/${q.id}`, {
       method: "DELETE",
     });
     if (res.ok) {
@@ -588,7 +598,7 @@ export default function Home() {
 
   const addCrawlKeyword = async () => {
     if (!newCrawlKeyword.trim()) return;
-    const res = await fetch(`${API_BASE}/api/crawl-keywords`, {
+    const res = await fetchApi(`/api/crawl-keywords`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keyword: newCrawlKeyword.trim(), scope: newCrawlScope }),
@@ -600,7 +610,7 @@ export default function Home() {
   };
 
   const toggleCrawlKeyword = async (kw: CrawlKeyword) => {
-    const res = await fetch(`${API_BASE}/api/crawl-keywords/${kw.id}`, {
+    const res = await fetchApi(`/api/crawl-keywords/${kw.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: kw.active ? 0 : 1 }),
@@ -611,7 +621,7 @@ export default function Home() {
   };
 
   const deleteCrawlKeyword = async (kw: CrawlKeyword) => {
-    const res = await fetch(`${API_BASE}/api/crawl-keywords/${kw.id}`, {
+    const res = await fetchApi(`/api/crawl-keywords/${kw.id}`, {
       method: "DELETE",
     });
     if (res.ok) {
@@ -1053,7 +1063,7 @@ export default function Home() {
                 <button
                   onClick={async () => {
                     try {
-                      const res = await fetch(`${API_BASE}/api/backfill-tags?force=true`, {
+                      const res = await fetchApi(`/api/backfill-tags?force=true`, {
                         method: "POST",
                       });
                       const data = await res.json();

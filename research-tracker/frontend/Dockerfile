@@ -1,5 +1,9 @@
 FROM node:20-alpine
 
+# Railway Variables (runtime): BACKEND_URL, NEXT_PUBLIC_API_URL
+# - BACKEND_URL: backend API URL for proxy (e.g. https://xxx.up.railway.app)
+# - NEXT_PUBLIC_API_URL: used for build + direct fallback when proxy returns 502
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
