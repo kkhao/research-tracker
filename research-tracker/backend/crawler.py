@@ -65,6 +65,7 @@ OPENREVIEW_VENUES = [
 
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
 S2_FIELDS = "paperId,title,abstract,authors,publicationDate,year,venue,publicationVenue,citationCount,externalIds,url"
+S2_EARLY_EXIT = 250  # 达到此数量即停止，避免跑完所有关键词，提速且不牺牲覆盖
 S2_DEFAULT_QUERIES = [
     "3D vision",
     "world model",
@@ -595,7 +596,7 @@ def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> lis
         queries = S2_DEFAULT_QUERIES
 
     for query in queries:
-        if len(papers) >= max_results:
+        if len(papers) >= max_results or len(papers) >= S2_EARLY_EXIT:
             break
         params = {
             "query": query,
