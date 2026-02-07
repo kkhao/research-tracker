@@ -13,12 +13,26 @@ const API_BASE =
     : "/api/proxy";
 const API_DISPLAY = _API_URL;
 
+function directUrl(path: string): string {
+  return `${_API_URL.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 async function fetchApi(path: string, opts?: RequestInit): Promise<Response> {
+  const useProxy = API_BASE === "/api/proxy" && _API_URL.startsWith("http");
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  let res = await fetch(url, opts);
-  if (res.status === 502 && API_BASE === "/api/proxy" && _API_URL.startsWith("http")) {
-    const direct = `${_API_URL.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
-    res = await fetch(direct, opts);
+
+  let res: Response;
+  try {
+    res = await fetch(url, opts);
+  } catch (e) {
+    if (useProxy) {
+      res = await fetch(directUrl(path), opts);
+    } else {
+      throw e;
+    }
+  }
+  if (res.status === 502 && useProxy) {
+    res = await fetch(directUrl(path), opts);
   }
   return res;
 }
