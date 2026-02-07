@@ -132,9 +132,19 @@ export default function Home() {
 
   const fetchPapers = async (effective: typeof filters, retryCount = 0) => {
     setError(null);
-    const maxRetries = 4;
-    const retryDelayMs = 5000;
-    const fetchTimeoutMs = 60000;
+    const maxRetries = 7;
+    const retryDelayMs = 15000;
+    const fetchTimeoutMs = 90000;
+    if (retryCount > 0 && !API_BASE.includes("localhost")) {
+      try {
+        const hc = new AbortController();
+        const ht = setTimeout(() => hc.abort(), 10000);
+        await fetch(`${API_BASE}/api/health`, { signal: hc.signal });
+        clearTimeout(ht);
+      } catch {
+        /* warm-up: health check may wake Railway; continue to papers */
+      }
+    }
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), fetchTimeoutMs);
     try {
