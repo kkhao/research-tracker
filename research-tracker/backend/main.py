@@ -60,9 +60,8 @@ def _normalize_date(value: str | None) -> str | None:
 def list_papers(
     category: str | None = Query(None, description="Filter by arXiv category"),
     search: str | None = Query(None, description="Search in title/abstract"),
-    days: int | None = Query(15, ge=1, le=365, description="Papers from last N days"),
-    limit: int = Query(50, ge=1, le=500),
-    page: int = Query(1, ge=1, description="Page number (pagination)"),
+    days: int | None = Query(30, ge=0, le=365, description="Papers from last N days, 0=all time"),
+    limit: int = Query(100, ge=1, le=1000),
     source: str | None = Query(None, description="Filter by source (arxiv/openreview/s2)"),
     author: str | None = Query(None, description="Filter by author name"),
     affiliation: str | None = Query(None, description="Filter by affiliation"),
@@ -112,7 +111,7 @@ def list_papers(
         query += " AND citation_count >= ?"
         params.append(min_citations)
     
-    if days:
+    if days and days > 0:
         cutoff = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         from datetime import timedelta
         cutoff = (cutoff - timedelta(days=days)).isoformat()
@@ -127,9 +126,8 @@ def list_papers(
         query += " AND published_at <= ?"
         params.append(_normalize_date(to_date))
     
-    query += " ORDER BY published_at DESC LIMIT ? OFFSET ?"
+    query += " ORDER BY published_at DESC LIMIT ?"
     params.append(limit)
-    params.append((page - 1) * limit)
     
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -164,7 +162,7 @@ def list_papers(
 
 @app.post("/api/refresh")
 def refresh_papers(
-    days: int = Query(14, ge=1, le=30),
+    days: int = Query(15, ge=1, le=30),
     tag: str | None = Query(None, description="Only fetch arXiv papers for this tag (3DGS, 视频/世界模型, etc.). Omit for all."),
 ):
     """Trigger crawl to fetch new papers from arXiv. Supports tag filter for 选定标签->抓取."""

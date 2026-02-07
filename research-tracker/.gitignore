@@ -1,8 +1,7 @@
 backend/venv/
 backend/papers.db
 backend/.env
+backend/__pycache__/
 frontend/node_modules/
 frontend/.next/
 .env.local
-__pycache__/
-*.pyc

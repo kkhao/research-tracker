@@ -197,9 +197,9 @@ def _fetch_tag_papers(
     lock: threading.Lock,
     page_size: int = 50,
     max_pages_per_query: int = 3,
-    max_queries_per_tag: int = 20,
+    max_queries_per_tag: int = 40,
 ) -> None:
-    """单标签抓取（供并行调用）。按关键词批次查询，合并去重。每关键词最多3页，每标签最多20条查询。"""
+    """单标签抓取（供并行调用）。按关键词批次查询，合并去重。每关键词最多3页，每标签最多40条查询。"""
     tag_count = 0
     for i, search_query in enumerate(search_queries):
         if tag_count >= max_per_tag or i >= max_queries_per_tag:
@@ -251,10 +251,10 @@ def _fetch_tag_papers(
 
 
 def fetch_recent_papers(
-    days: int = 14,
+    days: int = 15,
     max_results: int = 500,
-    min_per_tag: int = 10,
-    max_per_tag: int = 20,
+    min_per_tag: int = 15,
+    max_per_tag: int = 50,
     tag: str | None = None,
 ) -> list[dict]:
     """按标签并行抓取，每标签 min_per_tag～max_per_tag 篇。tag: 选定标签时仅抓取该标签关键词（PAPER_TAG_KEYWORDS）。"""
@@ -457,7 +457,7 @@ def _fetch_openreview_via_client(venue_id: str, venue_name: str, cutoff_ms: int,
     return papers
 
 
-def fetch_openreview_papers(days: int = 7, max_results: int = 500, min_per_venue: int = 10, max_per_venue: int = 20) -> list[dict]:
+def fetch_openreview_papers(days: int = 15, max_results: int = 500, min_per_venue: int = 10, max_per_venue: int = 50) -> list[dict]:
     """按会议抓取，每会议 min_per_venue～max_per_venue 篇。"""
     papers = []
     seen_ids = set()
@@ -566,7 +566,7 @@ def fetch_openreview_papers(days: int = 7, max_results: int = 500, min_per_venue
     return papers[:max_results]
 
 
-def fetch_semantic_scholar_papers(days: int = 7, max_results: int = 200) -> list[dict]:
+def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> list[dict]:
     """Fetch recent papers from Semantic Scholar (public Graph API)."""
     papers = []
     seen_ids = set()
@@ -594,7 +594,7 @@ def fetch_semantic_scholar_papers(days: int = 7, max_results: int = 200) -> list
             break
         params = {
             "query": query,
-            "limit": min(20, max_results - len(papers)),
+            "limit": min(50, max_results - len(papers)),
             "fields": S2_FIELDS,
         }
         try:
@@ -706,7 +706,7 @@ def _matches_subscription(paper: dict, sub) -> bool:
     return False
 
 
-def fetch_and_store(days: int = 14, tag: str | None = None):
+def fetch_and_store(days: int = 15, tag: str | None = None):
     """Fetch papers and store in database. tag: 选定标签时仅 arXiv 按该标签关键词抓取。"""
     init_db()
     with ThreadPoolExecutor(max_workers=3) as ex:
