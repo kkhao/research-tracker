@@ -191,6 +191,7 @@ def _build_tag_query(keywords: list[str], require_3dgs: bool = False) -> str:
 def _fetch_tag_papers(
     tag: str,
     search_queries: list[str],
+    min_per_tag: int,
     max_per_tag: int,
     papers: list,
     seen_ids: set,
@@ -199,10 +200,12 @@ def _fetch_tag_papers(
     max_pages_per_query: int = 3,
     max_queries_per_tag: int = 40,
 ) -> None:
-    """单标签抓取（供并行调用）。按关键词批次查询，合并去重。每关键词最多3页，每标签最多40条查询。"""
+    """单标签抓取（供并行调用）。每标签至少 min_per_tag 篇，最多 max_per_tag 篇。未达 min 时继续跑更多查询。"""
     tag_count = 0
     for i, search_query in enumerate(search_queries):
-        if tag_count >= max_per_tag or i >= max_queries_per_tag:
+        if tag_count >= max_per_tag:
+            break
+        if i >= max_queries_per_tag and tag_count >= min_per_tag:
             break
         arxiv_start = 0
         for _ in range(max_pages_per_query):
@@ -253,7 +256,7 @@ def _fetch_tag_papers(
 def fetch_recent_papers(
     days: int = 15,
     max_results: int = 500,
-    min_per_tag: int = 15,
+    min_per_tag: int = 10,
     max_per_tag: int = 50,
     tag: str | None = None,
 ) -> list[dict]:
@@ -296,6 +299,7 @@ def fetch_recent_papers(
                 _fetch_tag_papers,
                 t,
                 search_queries,
+                min_per_tag,
                 max_per_tag,
                 papers,
                 seen_ids,
