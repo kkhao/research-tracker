@@ -65,9 +65,9 @@ OPENREVIEW_VENUES = [
 
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
 S2_FIELDS = "paperId,title,abstract,authors,publicationDate,year,venue,publicationVenue,citationCount,externalIds,url"
-S2_EARLY_EXIT = 250  # 达到此数量即停止，避免跑完所有关键词，提速且不牺牲覆盖
-S2_WORKERS = 3  # 并行请求数，避免触发 S2 限流（100 次/5 分钟）
-S2_TIMEOUT = 30
+S2_EARLY_EXIT = 200  # 达到此数量即停止，提速
+S2_WORKERS = 4  # 并行请求数，避免触发 S2 限流（100 次/5 分钟）
+S2_TIMEOUT = 20
 S2_DEFAULT_QUERIES = [
     "3D vision",
     "world model",
@@ -653,13 +653,14 @@ def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> lis
     seen_ids = set()
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
+    # 优先用精简关键词：crawl_keywords/s2_queries > S2_DEFAULT_QUERIES(26) > ARXIV_SEARCH_KEYWORDS(60)
     queries = load_crawl_keywords("papers")
     if not queries:
         queries = _load_s2_queries()
     if not queries:
-        queries = ARXIV_SEARCH_KEYWORDS
+        queries = S2_DEFAULT_QUERIES  # 26 个，比 ARXIV_SEARCH_KEYWORDS(60) 少，加快抓取
     if not queries:
-        queries = S2_DEFAULT_QUERIES
+        queries = ARXIV_SEARCH_KEYWORDS
 
     for i in range(0, len(queries), S2_WORKERS):
         if len(papers) >= max_results or len(papers) >= S2_EARLY_EXIT:
