@@ -1,12 +1,12 @@
-# 后端 Dockerfile（Root Directory 填 research-tracker 时，上下文为 research-tracker/）
+# 后端 Dockerfile（构建上下文为仓库根目录时，backend 在 research-tracker/ 下）
 FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+COPY research-tracker/backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
+COPY research-tracker/backend/ .
 
 EXPOSE 8000
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
