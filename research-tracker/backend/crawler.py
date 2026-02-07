@@ -45,7 +45,7 @@ def _build_search_keywords(max_count: int = 60) -> list[str]:
 
 ARXIV_SEARCH_KEYWORDS = _build_search_keywords(60)
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
-ARXIV_CATEGORIES = ["cs.CV", "cs.LG", "cs.GR", "cs.RO", "cs.CL", "cs.AI", "cs.MM", "eess.IV"]
+# 已去掉分类限制，不再限定 cs.CV/cs.LG 等
 
 OPENREVIEW_API = "https://api.openreview.net/notes"
 OPENREVIEW_API_V2 = "https://api2.openreview.net/notes"
@@ -142,9 +142,7 @@ def _parse_entry(entry) -> dict | None:
 
 
 def _build_arxiv_keyword_query(keywords: list[str], batch_size: int = 6) -> list[str]:
-    """Build arXiv search_query strings: (all:kw1+OR+...)+AND+(cat:cs.CV+OR+...)."""
-    cat_part = "+OR+".join(f"cat:{c}" for c in ARXIV_CATEGORIES)
-    cat_part = f"({cat_part})"
+    """Build arXiv search_query strings: (all:kw1+OR+...). 无分类限制。"""
     queries = []
     for i in range(0, len(keywords), batch_size):
         batch = keywords[i : i + batch_size]
@@ -155,13 +153,12 @@ def _build_arxiv_keyword_query(keywords: list[str], batch_size: int = 6) -> list
             else:
                 terms.append(f"all:{kw}")
         kw_part = "+OR+".join(terms)
-        queries.append(f"({kw_part})+AND+{cat_part}")
+        queries.append(f"({kw_part})")
     return queries
 
 
 def _build_tag_query(keywords: list[str], require_3dgs: bool = False) -> str:
-    """Build single arXiv query from a tag's keywords (OR). require_3dgs: 添加 3dgs 约束（AND 条件）。"""
-    cat_part = "+OR+".join(f"cat:{c}" for c in ARXIV_CATEGORIES)
+    """Build single arXiv query from a tag's keywords (OR). require_3dgs: 添加 3dgs 约束（AND 条件）。无分类限制。"""
     terms = []
     for kw in keywords:
         k = kw.strip()
@@ -186,8 +183,8 @@ def _build_tag_query(keywords: list[str], require_3dgs: bool = False) -> str:
                 gs_terms.append(f"all:{k}")
         if gs_terms:
             gs_part = "+OR+".join(gs_terms)
-            return f"({kw_part})+AND+({gs_part})+AND+({cat_part})"
-    return f"({kw_part})+AND+({cat_part})"
+            return f"({kw_part})+AND+({gs_part})"
+    return f"({kw_part})"
 
 
 def _fetch_tag_papers(
