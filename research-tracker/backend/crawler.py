@@ -712,13 +712,12 @@ def _matches_subscription(paper: dict, sub) -> bool:
 
 
 def fetch_and_store(days: int = 15, tag: str | None = None):
-    """Fetch papers and store in database. tag: 选定标签时 arXiv 按该标签关键词抓取；OpenReview/S2 抓取后按该标签关键词过滤入库。"""
+    """Fetch papers and store in database. tag: 选定标签时 arXiv 按该标签关键词抓取；S2 抓取后按该标签关键词过滤入库。"""
     init_db()
-    with ThreadPoolExecutor(max_workers=3) as ex:
+    with ThreadPoolExecutor(max_workers=2) as ex:
         fut_arxiv = ex.submit(fetch_recent_papers, days=days, tag=tag)
-        fut_or = ex.submit(fetch_openreview_papers, days)
         fut_s2 = ex.submit(fetch_semantic_scholar_papers, days)
-        papers = fut_arxiv.result() + fut_or.result() + fut_s2.result()
+        papers = fut_arxiv.result() + fut_s2.result()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -756,12 +755,7 @@ def fetch_and_store(days: int = 15, tag: str | None = None):
             )
             if not any(t in BUSINESS_TAGS for t in tags_list):
                 continue
-            # 会议论文（OpenReview）需同时有会议标签和至少一个研究方向标签
-            if p.get("source") == "openreview":
-                paper_tags = frozenset(PAPER_TAG_KEYWORDS.keys())
-                if not any(t in paper_tags for t in tags_list):
-                    continue
-            # 指定 tag 时，会议论文（OpenReview）等也按该研究方向关键词过滤
+            # 指定 tag 时，S2 等抓到的论文也按该研究方向关键词过滤
             tag_key = tag.strip() if tag and tag.strip() else None
             if tag_key and tag_key in PAPER_TAG_KEYWORDS and tag_key not in tags_list:
                 continue

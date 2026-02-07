@@ -63,7 +63,7 @@ def list_papers(
     days: int | None = Query(30, ge=0, le=365, description="Papers from last N days, 0=all time"),
     conference_days: int | None = Query(365, ge=0, le=365, description="OpenReview papers from last N days, 0=all time"),
     limit: int = Query(100, ge=1, le=1000),
-    source: str | None = Query(None, description="Filter by source (arxiv/openreview/s2)"),
+    source: str | None = Query(None, description="Filter by source (arxiv/s2). openreview 仅用于筛选已有数据。"),
     author: str | None = Query(None, description="Filter by author name"),
     affiliation: str | None = Query(None, description="Filter by affiliation"),
     keyword: str | None = Query(None, description="Keyword in title/abstract/categories"),
@@ -177,9 +177,9 @@ def list_papers(
 @app.post("/api/refresh")
 def refresh_papers(
     days: int = Query(15, ge=1, le=30),
-    tag: str | None = Query(None, description="Only fetch/filter papers for this tag (3DGS, 视频/世界模型, etc.). arXiv: 按关键词抓取；OpenReview/S2: 抓取后按标签过滤入库。"),
+    tag: str | None = Query(None, description="Only fetch/filter papers for this tag (3DGS, 视频/世界模型, etc.). arXiv: 按关键词抓取；S2: 抓取后按标签过滤入库。"),
 ):
-    """Trigger crawl to fetch new papers from arXiv, OpenReview, S2. tag 指定时 arXiv 按关键词抓取，OpenReview/S2 抓取后按该标签过滤入库。抓取后自动清理无业务标签的旧数据。"""
+    """Trigger crawl to fetch new papers from arXiv, S2. tag 指定时 arXiv 按关键词抓取，S2 抓取后按该标签过滤入库。抓取后自动清理无业务标签的旧数据。"""
     count, notifications = fetch_and_store(days=days, tag=tag)
     deleted = cleanup_papers_without_business_tags(openreview_only=False)
     _invalidate_tags_cache()
