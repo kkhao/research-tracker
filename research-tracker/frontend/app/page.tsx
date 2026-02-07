@@ -163,7 +163,7 @@ export default function Home() {
       if (effective.from_date) params.set("from_date", effective.from_date);
       if (effective.to_date) params.set("to_date", effective.to_date);
       if (effective.min_citations) params.set("min_citations", effective.min_citations);
-      params.set("limit", "500");
+      params.set("limit", "100");
 
       const res = await fetch(`${API_BASE}/api/papers?${params}`, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -181,10 +181,13 @@ export default function Home() {
         setTimeout(() => fetchPapers(effective, retryCount + 1), retryDelayMs);
         return;
       }
-      const hint = (e instanceof Error && e.name === "AbortError")
-        ? "请求超时。Railway 冷启动可能较慢，请稍后刷新重试。"
-        : "";
-      setError(`无法连接后端 (${API_BASE})。${hint}请检查 NEXT_PUBLIC_API_URL 是否配置正确`);
+      const err = e instanceof Error ? e : new Error(String(e));
+      const hint = err.name === "AbortError"
+        ? "请求超时。请稍后刷新重试。"
+        : err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError")
+          ? "网络错误，可能被防火墙或代理阻挡。"
+          : "";
+      setError(`无法连接后端 (${API_BASE})。${hint}请检查 NEXT_PUBLIC_API_URL 配置并 Redeploy 前端。`);
       setPapers([]);
       setLoading(false);
     }
