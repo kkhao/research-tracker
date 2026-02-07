@@ -5,9 +5,9 @@ from typing import Sequence
 # 3DGS 相关关键词：以下标签需同时匹配 3dgs + 该标签关键词，才打标
 THREEDGS_KEYWORDS = ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian", "gaussian splatting", "neural gaussian"]
 # 需同时包含 3dgs 的标签
-THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "VR/AR", "3DGS水下建模", "空间智能", "视频/世界模型"})
-# 以下标签抓取时不加 3dgs 前缀（组合搜索过窄易返回空，打标仍需 3dgs）
-SEARCH_WITHOUT_3DGS_PREFIX = frozenset({"空间智能"})
+THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "VR/AR", "3DGS水下建模", "视频/世界模型"})
+# 以下标签抓取时不加 3dgs 前缀；空间智能已移出 THREEDGS_REQUIRED_TAGS，无需 3dgs
+SEARCH_WITHOUT_3DGS_PREFIX = frozenset()
 
 # 研究方向标签：tag -> 匹配关键词（title/abstract/summary 中不区分大小写）
 PAPER_TAG_KEYWORDS: dict[str, list[str]] = {
