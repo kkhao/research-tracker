@@ -5,6 +5,7 @@ interface FiltersProps {
     category: string;
     search: string;
     days: number;
+    conference_days: number;
     source: string;
     author: string;
     affiliation: string;
@@ -151,6 +152,20 @@ export default function Filters({ filters, onChange, section = "main" }: Filters
         >
           {DAY_OPTIONS.map((d) => (
             <option key={d.value} value={d.value}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-[var(--text-muted)] w-20" title="会议论文(OpenReview)时间范围">会议时间</label>
+        <select
+          value={filters.conference_days}
+          onChange={(e) => onChange({ ...filters, conference_days: Number(e.target.value) })}
+          className={inputClass}
+        >
+          {DAY_OPTIONS.map((d) => (
+            <option key={`c-${d.value}`} value={d.value}>
               {d.label}
             </option>
           ))}

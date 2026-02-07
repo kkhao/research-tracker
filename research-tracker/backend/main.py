@@ -61,6 +61,7 @@ def list_papers(
     category: str | None = Query(None, description="Filter by arXiv category"),
     search: str | None = Query(None, description="Search in title/abstract"),
     days: int | None = Query(30, ge=0, le=365, description="Papers from last N days, 0=all time"),
+    conference_days: int | None = Query(365, ge=0, le=365, description="OpenReview papers from last N days, 0=all time"),
     limit: int = Query(100, ge=1, le=1000),
     source: str | None = Query(None, description="Filter by source (arxiv/openreview/s2)"),
     author: str | None = Query(None, description="Filter by author name"),
@@ -110,13 +111,26 @@ def list_papers(
     if min_citations is not None:
         query += " AND citation_count >= ?"
         params.append(min_citations)
-    
-    if days and days > 0:
-        cutoff = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        from datetime import timedelta
-        cutoff = (cutoff - timedelta(days=days)).isoformat()
-        query += " AND published_at >= ?"
-        params.append(cutoff)
+
+    from datetime import timedelta
+    now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    if not from_date and not to_date:
+        if source == "openreview":
+            if conference_days and conference_days > 0:
+                cutoff = (now - timedelta(days=conference_days)).isoformat()
+                query += " AND published_at >= ?"
+                params.append(cutoff)
+        elif source:
+            if days and days > 0:
+                cutoff = (now - timedelta(days=days)).isoformat()
+                query += " AND published_at >= ?"
+                params.append(cutoff)
+        else:
+            if (days or 0) > 0 or (conference_days or 0) > 0:
+                d_cut = (now - timedelta(days=days or 0)).isoformat() if (days or 0) > 0 else "1970-01-01"
+                c_cut = (now - timedelta(days=conference_days or 0)).isoformat() if (conference_days or 0) > 0 else "1970-01-01"
+                query += " AND ((source = 'openreview' AND published_at >= ?) OR (COALESCE(source, '') != 'openreview' AND published_at >= ?))"
+                params.extend([c_cut, d_cut])
 
     if from_date:
         query += " AND published_at >= ?"

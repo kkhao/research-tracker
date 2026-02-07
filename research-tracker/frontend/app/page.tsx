@@ -111,6 +111,7 @@ export default function Home() {
     category: "",
     search: "",
     days: 15,
+    conference_days: 365,
     source: "",
     author: "",
     affiliation: "",
@@ -138,6 +139,7 @@ export default function Home() {
       if (effective.search) params.set("search", effective.search);
       if (!effective.from_date && !effective.to_date) {
         params.set("days", String(effective.days));
+        params.set("conference_days", String(effective.conference_days));
       }
       if (effective.source) params.set("source", effective.source);
       if (effective.author) params.set("author", effective.author);
@@ -181,6 +183,7 @@ export default function Home() {
   }, [
     filters.category,
     filters.days,
+    filters.conference_days,
     filters.source,
     filters.tag,
     filters.from_date,
