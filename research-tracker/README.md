@@ -109,6 +109,7 @@ Railway 容器重启或重新部署会清空 SQLite 数据库。**必须添加 V
 2. **前端**：再新建一个 Service，连接同一仓库，Root Directory 填 `research-tracker/frontend`
 3. 在前端 Service 的 **Variables** 中添加：`NEXT_PUBLIC_API_URL=https://后端域名`（必须是后端域名，不是前端自己的域名）
 4. 为前端生成域名，**Redeploy** 前端使变量生效，访问即可使用
+5. **代理模式**：前端会通过同源代理请求后端，避免跨域（CORS）和网络阻挡。仅当 `NEXT_PUBLIC_API_URL` 为 localhost 时直连，否则走代理。
 
 ## 定时更新
 

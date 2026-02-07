@@ -6,7 +6,12 @@ import PostCard, { type Post } from "@/components/PostCard";
 import Filters from "@/components/Filters";
 import { useDebounce } from "@/hooks/useDebounce";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const _API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE =
+  _API_URL.includes("localhost") || _API_URL.includes("127.0.0.1")
+    ? _API_URL
+    : "/api/proxy";
+const API_DISPLAY = _API_URL;
 
 export interface Paper {
   id: string;
@@ -187,7 +192,7 @@ export default function Home() {
         : err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError")
           ? "网络错误，可能被防火墙或代理阻挡。"
           : "";
-      setError(`无法连接后端 (${API_BASE})。${hint}请检查 NEXT_PUBLIC_API_URL 配置并 Redeploy 前端。`);
+      setError(`无法连接后端 (${API_DISPLAY})。${hint}请检查 NEXT_PUBLIC_API_URL 配置并 Redeploy 前端。`);
       setPapers([]);
       setLoading(false);
     }
@@ -1279,7 +1284,7 @@ export default function Home() {
               <div className="text-center py-24 text-[var(--text-muted)] max-w-md mx-auto">
                 <p className="mb-4 text-red-400">{error}</p>
                 <p className="text-sm mb-4 text-left">
-                  {API_BASE.includes("localhost") ? (
+                  {API_DISPLAY.includes("localhost") ? (
                     <>本地开发请先启动后端: <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">uvicorn main:app --reload --port 8000</code></>
                   ) : (
                     <>
@@ -1287,7 +1292,7 @@ export default function Home() {
                     </>
                   )}
                 </p>
-                <a href={`${API_BASE}/api/health`} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--accent)] hover:underline block mb-4">
+                <a href={API_BASE.startsWith("/") ? `${API_BASE}/api/health` : `${API_DISPLAY}/api/health`} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--accent)] hover:underline block mb-4">
                   测试后端健康检查 →
                 </a>
                 <button
