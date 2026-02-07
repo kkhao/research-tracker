@@ -105,10 +105,10 @@ Railway 容器重启或重新部署会清空 SQLite 数据库。**必须添加 V
 
 ### 方式二：前后端完整部署
 
-1. **后端**：新建 Service，连接同一仓库，Root Directory 留空（使用根目录 Dockerfile），生成域名
+1. **后端**：新建 Service，连接同一仓库，Root Directory 留空（使用根目录 Dockerfile），**Settings → Networking → Generate Domain** 生成后端域名（如 `xxx.up.railway.app`）
 2. **前端**：再新建一个 Service，连接同一仓库，Root Directory 填 `research-tracker/frontend`
-3. 在前端 Service 的 **Variables** 中添加：`NEXT_PUBLIC_API_URL=https://后端域名`
-4. 为前端生成域名，访问即可使用
+3. 在前端 Service 的 **Variables** 中添加：`NEXT_PUBLIC_API_URL=https://后端域名`（必须是后端域名，不是前端自己的域名）
+4. 为前端生成域名，**Redeploy** 前端使变量生效，访问即可使用
 
 ## 定时更新
 

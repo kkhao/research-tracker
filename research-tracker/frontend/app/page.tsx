@@ -129,8 +129,9 @@ export default function Home() {
   const debouncedCodeSearch = useDebounce(codeFilters.search, 300);
   const debouncedCompanySearch = useDebounce(companyFilters.search, 300);
 
-  const fetchPapers = async (effective: typeof filters) => {
+  const fetchPapers = async (effective: typeof filters, retryCount = 0) => {
     setError(null);
+    const maxRetries = 2;
     try {
       const params = new URLSearchParams();
       if (effective.category) params.set("category", effective.category);
@@ -156,10 +157,14 @@ export default function Home() {
         const url = `${API_BASE}/api/papers`;
         setError(`请求失败: ${res.status}。请检查 ${url} 是否可访问`);
       }
+      setLoading(false);
     } catch (e) {
+      if (retryCount < maxRetries) {
+        setTimeout(() => fetchPapers(effective, retryCount + 1), 2000);
+        return;
+      }
       setError(`无法连接后端 (${API_BASE})，请检查 NEXT_PUBLIC_API_URL 是否配置正确`);
       setPapers([]);
-    } finally {
       setLoading(false);
     }
   };
@@ -1252,7 +1257,9 @@ export default function Home() {
                   {API_BASE.includes("localhost") ? (
                     <>本地开发请先启动后端: <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">uvicorn main:app --reload --port 8000</code></>
                   ) : (
-                    <>Railway 部署请确认前端 Variables 中 <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">NEXT_PUBLIC_API_URL</code> 为后端域名，修改后需 Redeploy</>
+                    <>
+                      Railway 部署：前端 Variables 中 <code className="bg-[var(--tag-bg)] px-2 py-1 rounded text-xs">NEXT_PUBLIC_API_URL</code> 必须填<strong>后端</strong>域名（不是前端域名）。修改后需 Redeploy 才能生效。
+                    </>
                   )}
                 </p>
                 <a href={`${API_BASE}/api/health`} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--accent)] hover:underline block mb-4">
