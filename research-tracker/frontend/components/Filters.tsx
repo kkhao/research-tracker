@@ -13,6 +13,7 @@ interface FiltersProps {
     from_date: string;
     to_date: string;
     min_citations: string;
+    page?: number;
   };
   onChange: (f: FiltersProps["filters"]) => void;
   section?: "main" | "advanced";
@@ -69,6 +70,7 @@ const TAG_OPTIONS = [
 const DAY_OPTIONS = [
   { value: 7, label: "近7天" },
   { value: 14, label: "近14天" },
+  { value: 15, label: "近15天" },
   { value: 30, label: "近30天" },
   { value: 90, label: "近90天" },
 ];

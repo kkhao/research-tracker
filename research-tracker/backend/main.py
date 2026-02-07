@@ -60,8 +60,9 @@ def _normalize_date(value: str | None) -> str | None:
 def list_papers(
     category: str | None = Query(None, description="Filter by arXiv category"),
     search: str | None = Query(None, description="Search in title/abstract"),
-    days: int | None = Query(30, ge=1, le=365, description="Papers from last N days"),
-    limit: int = Query(50, ge=1, le=200),
+    days: int | None = Query(15, ge=1, le=365, description="Papers from last N days"),
+    limit: int = Query(50, ge=1, le=500),
+    page: int = Query(1, ge=1, description="Page number (pagination)"),
     source: str | None = Query(None, description="Filter by source (arxiv/openreview/s2)"),
     author: str | None = Query(None, description="Filter by author name"),
     affiliation: str | None = Query(None, description="Filter by affiliation"),
@@ -126,8 +127,9 @@ def list_papers(
         query += " AND published_at <= ?"
         params.append(_normalize_date(to_date))
     
-    query += " ORDER BY published_at DESC LIMIT ?"
+    query += " ORDER BY published_at DESC LIMIT ? OFFSET ?"
     params.append(limit)
+    params.append((page - 1) * limit)
     
     cursor.execute(query, params)
     rows = cursor.fetchall()

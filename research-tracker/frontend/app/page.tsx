@@ -110,7 +110,7 @@ export default function Home() {
   const [filters, setFilters] = useState({
     category: "",
     search: "",
-    days: 30,
+    days: 15,
     source: "",
     author: "",
     affiliation: "",
@@ -119,6 +119,7 @@ export default function Home() {
     from_date: "",
     to_date: "",
     min_citations: "",
+    page: 1,
   });
 
   const debouncedSearch = useDebounce(filters.search, 300);
@@ -146,7 +147,8 @@ export default function Home() {
       if (effective.from_date) params.set("from_date", effective.from_date);
       if (effective.to_date) params.set("to_date", effective.to_date);
       if (effective.min_citations) params.set("min_citations", effective.min_citations);
-      params.set("limit", "200");
+      params.set("limit", "500");
+      params.set("page", String(effective.page ?? 1));
 
       const res = await fetch(`${API_BASE}/api/papers?${params}`);
       if (res.ok) {
@@ -181,6 +183,7 @@ export default function Home() {
     filters.from_date,
     filters.to_date,
     filters.min_citations,
+    filters.page,
     debouncedSearch,
     debouncedAuthor,
     debouncedAffiliation,
@@ -668,7 +671,7 @@ export default function Home() {
             </div>
             {activeTab === "papers" && (
               <div className="flex flex-wrap items-center gap-3 flex-1">
-                <Filters filters={filters} onChange={setFilters} section="main" />
+                <Filters filters={filters} onChange={(f) => setFilters({ ...f, page: 1 })} section="main" />
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
@@ -1040,7 +1043,7 @@ export default function Home() {
                 <div className="text-sm font-medium text-[var(--text-muted)] mb-3">
                   高级筛选
                 </div>
-                <Filters filters={filters} onChange={setFilters} section="advanced" />
+                <Filters filters={filters} onChange={(f) => setFilters({ ...f, page: 1 })} section="advanced" />
               </div>
               <div>
                 <div className="text-sm font-medium text-[var(--text-muted)] mb-3">
@@ -1289,6 +1292,21 @@ export default function Home() {
                 {papers.map((paper) => (
                   <PaperCard key={paper.id} paper={paper} />
                 ))}
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  {[1, 2, 3].map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setFilters((f) => ({ ...f, page: p }))}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filters.page === p
+                          ? "bg-[var(--accent)] text-white"
+                          : "bg-[var(--tag-bg)] border border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)]/50"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </>
