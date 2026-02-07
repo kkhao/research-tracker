@@ -281,8 +281,8 @@ def fetch_recent_papers(
         if not valid_kws:
             continue
         require_3dgs = t in THREEDGS_REQUIRED_TAGS and t not in SEARCH_WITHOUT_3DGS_PREFIX
-        # 每 2 个关键词合并为一条查询，每标签最多 20 条，保证更多关键词参与
-        BATCH_SIZE = 2
+        # 每个关键词单独查询，提高冷门标签覆盖
+        BATCH_SIZE = 1
         search_queries = []
         for i in range(0, len(valid_kws), BATCH_SIZE):
             batch = valid_kws[i : i + BATCH_SIZE]
