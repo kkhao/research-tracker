@@ -189,60 +189,63 @@ def _build_tag_query(keywords: list[str], require_3dgs: bool = False) -> str:
 
 def _fetch_tag_papers(
     tag: str,
-    search_query: str,
+    search_queries: list[str],
     max_per_tag: int,
     papers: list,
     seen_ids: set,
     lock: threading.Lock,
     page_size: int = 50,
-    max_pages: int = 10,
+    max_pages_per_query: int = 5,
 ) -> None:
-    """单标签抓取（供并行调用）。"""
+    """单标签抓取（供并行调用）。按关键词逐个查询，合并去重。"""
     tag_count = 0
-    arxiv_start = 0
-    for _ in range(max_pages):
+    for search_query in search_queries:
         if tag_count >= max_per_tag:
             break
-        params = {
-            "search_query": search_query,
-            "sortBy": "submittedDate",
-            "sortOrder": "descending",
-            "start": arxiv_start,
-            "max_results": page_size,
-        }
-        try:
-            r = requests.get(ARXIV_API, params=params, timeout=20)
-            r.raise_for_status()
-            root = ET.fromstring(r.content)
-        except Exception:
-            break
-        entries = root.findall("atom:entry", ARXIV_NS)
-        if not entries:
-            break
-        for entry in entries:
-            p = _parse_entry(entry)
-            if not p:
-                continue
-            with lock:
-                if p["id"] in seen_ids:
+        arxiv_start = 0
+        for _ in range(max_pages_per_query):
+            if tag_count >= max_per_tag:
+                break
+            params = {
+                "search_query": search_query,
+                "sortBy": "submittedDate",
+                "sortOrder": "descending",
+                "start": arxiv_start,
+                "max_results": page_size,
+            }
+            try:
+                r = requests.get(ARXIV_API, params=params, timeout=20)
+                r.raise_for_status()
+                root = ET.fromstring(r.content)
+            except Exception:
+                break
+            entries = root.findall("atom:entry", ARXIV_NS)
+            if not entries:
+                break
+            for entry in entries:
+                p = _parse_entry(entry)
+                if not p:
                     continue
-                seen_ids.add(p["id"])
-                papers.append(p)
-            tags_list = tag_paper(
-                p.get("title", ""),
-                p.get("abstract", ""),
-                p.get("categories", ""),
-                p.get("keywords", ""),
-                p.get("source", ""),
-                p.get("venue", ""),
-            )
-            if tag in tags_list:
-                tag_count += 1
-                if tag_count >= max_per_tag:
-                    break
-        arxiv_start += len(entries)
-        if len(entries) < page_size:
-            break
+                with lock:
+                    if p["id"] in seen_ids:
+                        continue
+                    seen_ids.add(p["id"])
+                    papers.append(p)
+                tags_list = tag_paper(
+                    p.get("title", ""),
+                    p.get("abstract", ""),
+                    p.get("categories", ""),
+                    p.get("keywords", ""),
+                    p.get("source", ""),
+                    p.get("venue", ""),
+                )
+                if tag in tags_list:
+                    tag_count += 1
+                    if tag_count >= max_per_tag:
+                        break
+            arxiv_start += len(entries)
+            if len(entries) < page_size:
+                break
 
 
 def fetch_recent_papers(
@@ -273,24 +276,28 @@ def fetch_recent_papers(
         if not valid_kws:
             continue
         require_3dgs = t in THREEDGS_REQUIRED_TAGS
-        query = _build_tag_query(valid_kws, require_3dgs=require_3dgs)
-        if not query:
+        # 每个关键词单独查询，提升召回
+        search_queries = []
+        for kw in valid_kws:
+            query = _build_tag_query([kw], require_3dgs=require_3dgs)
+            if query:
+                search_queries.append(f"({query})+AND+{date_range}")
+        if not search_queries:
             continue
-        search_query = f"({query})+AND+{date_range}"
-        tasks.append((t, search_query))
+        tasks.append((t, search_queries))
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(
                 _fetch_tag_papers,
                 t,
-                search_query,
+                search_queries,
                 max_per_tag,
                 papers,
                 seen_ids,
                 lock,
             ): t
-            for t, search_query in tasks
+            for t, search_queries in tasks
         }
         for future in as_completed(futures):
             try:
