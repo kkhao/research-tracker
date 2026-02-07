@@ -5,15 +5,15 @@ from typing import Sequence
 # 3DGS 相关关键词：以下标签需同时匹配 3dgs + 该标签关键词，才打标
 THREEDGS_KEYWORDS = ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian", "gaussian splatting", "neural gaussian"]
 # 需同时包含 3dgs 的标签
-THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "VR/AR", "3DGS水下建模", "空间智能"})
+THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "VR/AR", "3DGS水下建模", "空间智能", "视频/世界模型"})
 # 以下标签抓取时不加 3dgs 前缀（组合搜索过窄易返回空，打标仍需 3dgs）
 SEARCH_WITHOUT_3DGS_PREFIX = frozenset({"空间智能"})
 
 # 研究方向标签：tag -> 匹配关键词（title/abstract/summary 中不区分大小写）
 PAPER_TAG_KEYWORDS: dict[str, list[str]] = {
     "3DGS": ["3d gaussian", "3d gaussian splatting", "3dgs", "4d gaussian", "4d gaussian splatting", "4dgs", "gaussian splatting", "dynamic gaussian", "neural gaussian"],
-    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model", "text-to-video", "image-to-video", "video diffusion", "generative world model", "aigc", "生成式ai", "video prediction", "world simulation"],
-    "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method", "physics-integrated", "generative dynamics", "spring-mass", "elastic", "granular", "fluid simulation", "continuum mechanics", "physics-based simulation"],
+    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video model", "text-to-video", "image-to-video", "video diffusion", "generative world model", "aigc", "world simulation"],
+    "3DGS物理仿真": ["physics", "physically", "physics simulation", "physics-based", "physical simulation", "mpm", "material point method", "physics-integrated", "generative dynamics", "spring-mass", "elastic", "granular", "fluid simulation", "continuum mechanics", "physics-based simulation"],
     "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "3d render", "text-to-3d", "image-to-3d", "novel view synthesis", "view synthesis", "3d scene generation", "3d scene reconstruction", "mesh generation", "radiance field", "neural rendering", "multi-view 3d"],
     "VR/AR": ["virtual reality", "augmented reality", "vr ", " ar ", "mixed reality", "extended reality", "xr", "spatial computing", "immersive", "head-mounted", "metaverse", "passthrough", "foveated rendering"],
     "可重光照/逆渲染": [
@@ -45,8 +45,8 @@ PAPER_TAG_KEYWORDS: dict[str, list[str]] = {
 # 社区/公司通用关键词
 POST_TAG_KEYWORDS: dict[str, list[str]] = {
     "3DGS": ["3d gaussian", "3d gaussian splatting", "3dgs", "4d gaussian", "4d gaussian splatting", "4dgs", "gaussian splatting", "dynamic gaussian", "neural gaussian"],
-    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video synthesis", "video model", "text-to-video", "image-to-video", "video diffusion", "generative world model", "aigc", "生成式ai", "video prediction", "world simulation", "gen-3", "sora", "runway", "pika"],
-    "3DGS物理仿真": ["physics simulation", "physics-based", "physical simulation", "mpm", "material point method", "physics-integrated", "generative dynamics", "spring-mass", "elastic", "granular", "fluid simulation", "continuum mechanics", "physics-based simulation"],
+    "视频/世界模型": ["world model", "world-model", "worldmodel", "video generation", "video model", "text-to-video", "image-to-video", "video diffusion", "generative world model", "aigc", "world simulation", "gen-3", "sora", "runway", "pika"],
+    "3DGS物理仿真": ["physics", "physically", "physics simulation", "physics-based", "physical simulation", "mpm", "material point method", "physics-integrated", "generative dynamics", "spring-mass", "elastic", "granular", "fluid simulation", "continuum mechanics", "physics-based simulation"],
     "3D重建/生成/渲染": ["3d reconstruction", "scene reconstruction", "3d generation", "3d gen", "3d rendering", "text-to-3d", "image-to-3d", "novel view synthesis", "view synthesis", "3d scene generation", "3d scene reconstruction", "mesh generation", "radiance field", "neural rendering", "multi-view 3d", "tripo", "meshy", "luma", "wonder3d"],
     "VR/AR": ["vr", "ar", "virtual reality", "augmented reality", "mixed reality", "extended reality", "xr", "spatial computing", "immersive", "head-mounted", "metaverse", "passthrough", "foveated rendering", "vision pro"],
     "可重光照/逆渲染": [

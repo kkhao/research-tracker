@@ -16,6 +16,7 @@ from tagging import (
     PAPER_TAG_KEYWORDS,
     THREEDGS_KEYWORDS,
     THREEDGS_REQUIRED_TAGS,
+    SEARCH_WITHOUT_3DGS_PREFIX,
 )
 
 log = logging.getLogger(__name__)
@@ -195,12 +196,13 @@ def _fetch_tag_papers(
     seen_ids: set,
     lock: threading.Lock,
     page_size: int = 50,
-    max_pages_per_query: int = 5,
+    max_pages_per_query: int = 2,
+    max_queries_per_tag: int = 10,
 ) -> None:
-    """单标签抓取（供并行调用）。按关键词逐个查询，合并去重。"""
+    """单标签抓取（供并行调用）。按关键词批次查询，合并去重。每关键词最多2页，每标签最多10条查询。"""
     tag_count = 0
-    for search_query in search_queries:
-        if tag_count >= max_per_tag:
+    for i, search_query in enumerate(search_queries):
+        if tag_count >= max_per_tag or i >= max_queries_per_tag:
             break
         arxiv_start = 0
         for _ in range(max_pages_per_query):
@@ -275,11 +277,13 @@ def fetch_recent_papers(
         valid_kws = [k for k in kws if len(k.strip()) >= 3]
         if not valid_kws:
             continue
-        require_3dgs = t in THREEDGS_REQUIRED_TAGS
-        # 每个关键词单独查询，提升召回
+        require_3dgs = t in THREEDGS_REQUIRED_TAGS and t not in SEARCH_WITHOUT_3DGS_PREFIX
+        # 每 2-3 个关键词合并为一条查询，减少请求数；轮询至多 10 条
+        BATCH_SIZE = 3
         search_queries = []
-        for kw in valid_kws:
-            query = _build_tag_query([kw], require_3dgs=require_3dgs)
+        for i in range(0, len(valid_kws), BATCH_SIZE):
+            batch = valid_kws[i : i + BATCH_SIZE]
+            query = _build_tag_query(batch, require_3dgs=require_3dgs)
             if query:
                 search_queries.append(f"({query})+AND+{date_range}")
         if not search_queries:
