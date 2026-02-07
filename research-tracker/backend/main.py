@@ -177,9 +177,9 @@ def list_papers(
 @app.post("/api/refresh")
 def refresh_papers(
     days: int = Query(15, ge=1, le=30),
-    tag: str | None = Query(None, description="Only fetch arXiv papers for this tag (3DGS, 视频/世界模型, etc.). Omit for all."),
+    tag: str | None = Query(None, description="Only fetch/filter papers for this tag (3DGS, 视频/世界模型, etc.). arXiv: 按关键词抓取；OpenReview/S2: 抓取后按标签过滤入库。"),
 ):
-    """Trigger crawl to fetch new papers from arXiv. Supports tag filter for 选定标签->抓取."""
+    """Trigger crawl to fetch new papers from arXiv, OpenReview, S2. tag 指定时 arXiv 按关键词抓取，OpenReview/S2 抓取后按该标签过滤入库。"""
     count, notifications = fetch_and_store(days=days, tag=tag)
     _invalidate_tags_cache()
     return {"status": "ok", "papers_added": count, "notifications_added": notifications}
