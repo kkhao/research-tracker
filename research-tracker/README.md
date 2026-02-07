@@ -50,6 +50,7 @@ uvicorn main:app --reload --port 8000
 5. **公司动态** 支持 Google News RSS；**微信公众号** 需在 `backend/company_crawler.py` 的 `WECHAT_MP_ALBUMS` 中配置 biz/aid（从公众号文章页 URL 获取），可选设置 `RSSHUB_BASE_URL` 使用自建 RSSHub 实例
 6. **公司动态抓不到数据**：Google News 在中国大陆无法直连。可选方案：① 设置环境变量 `HTTPS_PROXY=http://代理地址:端口` 后启动后端；② 部署到 Railway 等海外平台（海外节点可直连 Google）
 7. **Reddit 抓不到数据**：Reddit 在中国大陆无法直连，需在 `backend/.env` 中设置 `HTTPS_PROXY` 或部署到海外
+8. **YouTube 提示 quota exceeded**：YouTube Data API v3 每日配额有限（默认约 1 万单位，每次 search 约 100 单位）。配额在太平洋时间 0 点重置。可尝试：① 次日再试；② 在 [Google Cloud Console](https://console.cloud.google.com/apis/dashboard) 申请配额提升；③ 新建项目并创建新 API Key
 
 ## 功能说明
 

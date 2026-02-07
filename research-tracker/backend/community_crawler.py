@@ -9,7 +9,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 import requests
 from datetime import datetime, timedelta
 from database import get_connection, init_db, load_crawl_keywords
-from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS
+from tagging import tag_post, tags_to_str, POST_TAG_KEYWORDS, THREEDGS_REQUIRED_TAGS, SEARCH_WITHOUT_3DGS_PREFIX
 from crawler import ARXIV_SEARCH_KEYWORDS
 
 HN_API = "https://hn.algolia.com/api/v1/search"
@@ -112,11 +112,13 @@ def _fetch_reddit(sub: str, limit: int = 15, cutoff_ts: float | None = None, err
     return posts
 
 
-def _fetch_youtube(query: str, max_results: int = 15, cutoff_dt: datetime | None = None) -> list[dict]:
+def _fetch_youtube(query: str, max_results: int = 15, cutoff_dt: datetime | None = None, errors: list | None = None) -> list[dict]:
     """Fetch from YouTube Data API v3 (requires YOUTUBE_API_KEY env). cutoff_dt: only items published after this."""
     posts = []
     api_key = os.environ.get("YOUTUBE_API_KEY")
     if not api_key:
+        if errors is not None:
+            errors.append("YouTube: YOUTUBE_API_KEY 未设置")
         return posts
     try:
         r = requests.get(
@@ -161,15 +163,19 @@ def _fetch_youtube(query: str, max_results: int = 15, cutoff_dt: datetime | None
                 "created_at": published,
             })
     except requests.RequestException as e:
-        if hasattr(e, "response") and e.response is not None and e.response.status_code == 403:
-            err_body = ""
+        err_detail = ""
+        if hasattr(e, "response") and e.response is not None:
             try:
-                err_body = str(e.response.json().get("error", {}).get("message", ""))
+                err_body = e.response.json()
+                err_detail = err_body.get("error", {}).get("message", str(e))
             except Exception:
-                pass
-            print(f"YouTube 403: {err_body or 'API 未启用或配额/权限受限，请在 Google Cloud Console 启用 YouTube Data API v3 并检查配额'}")
+                err_detail = getattr(e, "message", str(e))
         else:
-            print(f"YouTube fetch error: {e}")
+            err_detail = str(e)
+        msg = f"YouTube: {err_detail}" if err_detail else f"YouTube fetch error: {e}"
+        print(msg)
+        if errors is not None:
+            errors.append(msg)
     return posts
 
 
@@ -227,8 +233,8 @@ def fetch_and_store_posts(
     # 选定标签：仅用该标签对应的关键词（HN/YouTube）；Reddit 无关键词搜索，按标签时跳过
     if tag and tag.strip() and tag.strip() in POST_TAG_KEYWORDS:
         keywords = [k for k in POST_TAG_KEYWORDS[tag.strip()] if len(k.strip()) >= 3]
-        # 3dgs 子标签：搜索时附加 3dgs 约束（AND 语义）
-        if tag.strip() in THREEDGS_REQUIRED_TAGS and keywords:
+        # 3dgs 子标签：搜索时附加 3dgs 约束；空间智能不加（组合过窄易返回空，打标仍需 3dgs）
+        if tag.strip() in THREEDGS_REQUIRED_TAGS and tag.strip() not in SEARCH_WITHOUT_3DGS_PREFIX and keywords:
             keywords = [f"3dgs {k}" for k in keywords]
     else:
         keywords = load_crawl_keywords("community")
@@ -260,7 +266,7 @@ def fetch_and_store_posts(
         out = []
         if fetch_youtube:
             for kw in keywords:
-                out.extend(_fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff))
+                out.extend(_fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff, errors=errors))
         return out
 
     tasks = []
