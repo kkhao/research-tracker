@@ -19,6 +19,7 @@ const TAG_CLASSES: Record<string, string> = {
   "ICLR": "tag-default",
   "NeurIPS": "tag-default",
   "SIGGRAPH": "tag-default",
+  "会议论文": "tag-default",
   "大模型": "tag-default",
 };
 

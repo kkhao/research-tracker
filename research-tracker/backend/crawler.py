@@ -793,6 +793,11 @@ def fetch_and_store(days: int = 15, tag: str | None = None, source: str | None =
             )
             if not any(t in BUSINESS_TAGS for t in tags_list):
                 continue
+            # OpenReview 论文必须至少有一个研究方向标签（仅会议标签不入库）
+            if p.get("source") == "openreview":
+                has_research = any(t in PAPER_TAG_KEYWORDS for t in tags_list)
+                if not has_research:
+                    continue
             # 指定 tag 时，S2 等抓到的论文也按该研究方向关键词过滤
             tag_key = tag.strip() if tag and tag.strip() else None
             if tag_key and tag_key in PAPER_TAG_KEYWORDS and tag_key not in tags_list:

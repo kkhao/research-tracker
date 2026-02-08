@@ -184,7 +184,7 @@ def refresh_papers(
 ):
     """Trigger crawl to fetch new papers from arXiv, S2, OpenReview. source 可指定仅拉取某源。"""
     count, notifications = fetch_and_store(days=days, tag=tag, source=source)
-    deleted = cleanup_papers_without_business_tags(openreview_only=False)
+    deleted = cleanup_papers_without_business_tags(openreview_only=True)
     _invalidate_tags_cache()
     return {"status": "ok", "papers_added": count, "notifications_added": notifications, "papers_deleted": deleted}
 
@@ -199,9 +199,9 @@ def backfill_tags(force: bool = Query(False, description="If true, re-tag all pa
 
 @app.post("/api/cleanup-papers")
 def cleanup_papers(
-    openreview_only: bool = Query(False, description="If true, only delete OpenReview papers without research direction tags"),
+    openreview_only: bool = Query(True, description="If true (default), also delete OpenReview papers without research direction tags. If false, only delete papers with no business tags."),
 ):
-    """Delete papers without business tags. Cleans up old data that no longer meets storage rules."""
+    """Delete papers without business tags. When openreview_only=true, also delete OpenReview papers that have only conference tags (no research direction)."""
     n = cleanup_papers_without_business_tags(openreview_only=openreview_only)
     _invalidate_tags_cache()
     return {"status": "ok", "papers_deleted": n}

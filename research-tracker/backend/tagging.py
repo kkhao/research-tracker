@@ -143,6 +143,11 @@ def tag_paper(
                 break
     if source:
         tags.append(source.upper())
+    # 仅有会议标签、无研究方向时，补充「会议论文」便于前端展示
+    has_research = any(t in PAPER_TAG_KEYWORDS for t in tags)
+    has_conference = any(t in CONFERENCE_TAG_KEYWORDS for t in tags)
+    if has_conference and not has_research:
+        tags.append("会议论文")
     return list(dict.fromkeys(tags))
 
 
