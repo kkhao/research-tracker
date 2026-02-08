@@ -269,8 +269,8 @@ def fetch_recent_papers(
     seen_ids = set()
     lock = threading.Lock()
 
-    end_dt = datetime.now(timezone.utc)
-    start_dt = end_dt - timedelta(days=days)
+    end_dt = datetime.now(timezone.utc) + timedelta(days=1)  # 多 1 天缓冲，应对服务器时区/时钟偏差
+    start_dt = end_dt - timedelta(days=days + 1)
     date_range = f"submittedDate:[{start_dt:%Y%m%d%H%M}+TO+{end_dt:%Y%m%d%H%M}]"
 
     tags_to_fetch = (
@@ -651,7 +651,7 @@ def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> lis
     """Fetch recent papers from Semantic Scholar (public Graph API). Parallel requests with S2_WORKERS."""
     papers = []
     seen_ids = set()
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days + 1)  # 多 1 天缓冲
 
     # 优先用精简关键词：crawl_keywords/s2_queries > S2_DEFAULT_QUERIES(26) > ARXIV_SEARCH_KEYWORDS(60)
     queries = load_crawl_keywords("papers")

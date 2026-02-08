@@ -112,23 +112,24 @@ def list_papers(
         query += " AND citation_count >= ?"
         params.append(min_citations)
 
-    from datetime import timedelta
-    now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    from datetime import timedelta, timezone
+    now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # 使用 YYYY-MM-DD 格式，避免 "2026-02-06"(date only) 与 "2026-02-06T00:00:00" 比较时被错误排除
+    def _date_cutoff(d: int) -> str:
+        return (now - timedelta(days=d)).strftime("%Y-%m-%d") if d > 0 else "1970-01-01"
     if not from_date and not to_date:
         if source == "openreview":
             if conference_days and conference_days > 0:
-                cutoff = (now - timedelta(days=conference_days)).isoformat()
                 query += " AND published_at >= ?"
-                params.append(cutoff)
+                params.append(_date_cutoff(conference_days))
         elif source:
             if days and days > 0:
-                cutoff = (now - timedelta(days=days)).isoformat()
                 query += " AND published_at >= ?"
-                params.append(cutoff)
+                params.append(_date_cutoff(days))
         else:
             if (days or 0) > 0 or (conference_days or 0) > 0:
-                d_cut = (now - timedelta(days=days or 0)).isoformat() if (days or 0) > 0 else "1970-01-01"
-                c_cut = (now - timedelta(days=conference_days or 0)).isoformat() if (conference_days or 0) > 0 else "1970-01-01"
+                d_cut = _date_cutoff(days or 0)
+                c_cut = _date_cutoff(conference_days or 0)
                 query += " AND ((source = 'openreview' AND published_at >= ?) OR (COALESCE(source, '') != 'openreview' AND published_at >= ?))"
                 params.extend([c_cut, d_cut])
 
@@ -582,3 +583,31 @@ def mark_notification_read(note_id: int):
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/debug/papers-dates")
+def debug_papers_dates():
+    """Diagnostic: max/min published_at, server time, latest 5 papers."""
+    from datetime import datetime, timezone
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT MAX(published_at), MIN(published_at), COUNT(*) FROM papers")
+    row = cur.fetchone()
+    mx, mn, cnt = (row[0], row[1], row[2]) if row else (None, None, 0)
+    cur.execute("SELECT id, title, published_at, source FROM papers ORDER BY published_at DESC LIMIT 5")
+    rows = cur.fetchall()
+    latest = [{"id": r[0], "title": (r[1] or "")[:60], "published_at": r[2], "source": r[3]} for r in rows]
+    cur.execute("SELECT COUNT(*) FROM papers WHERE published_at >= ?", ("2026-02-05",))
+    after_feb5 = cur.fetchone()[0]
+    conn.close()
+    now_utc = datetime.now(timezone.utc)
+    now_local = datetime.now()
+    return {
+        "max_published_at": mx,
+        "min_published_at": mn,
+        "total_count": cnt,
+        "count_after_feb5": after_feb5,
+        "server_now_utc": now_utc.isoformat(),
+        "server_now_local": now_local.isoformat(),
+        "latest_5": latest,
+    }
