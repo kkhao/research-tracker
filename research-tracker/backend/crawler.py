@@ -859,14 +859,14 @@ def cleanup_papers_without_business_tags(openreview_only: bool = False) -> int:
     rows = cursor.fetchall()
     deleted = 0
     for row in rows:
-        tags_list = str_to_tags(row.get("tags") or "")
+        tags_list = str_to_tags(row["tags"] or "")
         has_business = any(t in BUSINESS_TAGS for t in tags_list)
         if not has_business:
             cursor.execute("DELETE FROM notifications WHERE paper_id = ?", (row["id"],))
             cursor.execute("DELETE FROM papers WHERE id = ?", (row["id"],))
             deleted += 1
             continue
-        if openreview_only and row.get("source") == "openreview":
+        if openreview_only and row["source"] == "openreview":
             has_research = any(t in PAPER_TAG_KEYWORDS for t in tags_list)
             if not has_research:
                 cursor.execute("DELETE FROM notifications WHERE paper_id = ?", (row["id"],))
