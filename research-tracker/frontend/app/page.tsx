@@ -117,14 +117,12 @@ export default function Home() {
   const [postFilters, setPostFilters] = useState({
     source: "",
     search: "",
-    domain: "",
     tag: "",
     days: 7,
   });
   const [codeFilters, setCodeFilters] = useState({
     source: "",
     search: "",
-    domain: "",
     tag: "",
     days: 365,
     sort: "created",
@@ -299,7 +297,6 @@ export default function Home() {
         params.append("source", "huggingface");
       }
       if (debouncedCodeSearch) params.set("search", debouncedCodeSearch);
-      if (codeFilters.domain) params.set("domain", codeFilters.domain);
       if (codeFilters.tag) params.set("tag", codeFilters.tag);
       params.set("days", String(codeFilters.days));
       if (codeFilters.sort === "star") params.set("sort", "star");
@@ -329,7 +326,6 @@ export default function Home() {
       const params = new URLSearchParams();
       if (postFilters.source) params.set("source", postFilters.source);
       if (debouncedPostSearch) params.set("search", debouncedPostSearch);
-      if (postFilters.domain) params.set("domain", postFilters.domain);
       if (postFilters.tag) params.set("tag", postFilters.tag);
       params.set("days", String(postFilters.days));
       params.set("limit", "200");
@@ -390,12 +386,10 @@ export default function Home() {
     activeTab,
     postFilters.source,
     debouncedPostSearch,
-    postFilters.domain,
     postFilters.tag,
     postFilters.days,
     codeFilters.source,
     debouncedCodeSearch,
-    codeFilters.domain,
     codeFilters.tag,
     codeFilters.days,
     codeFilters.sort,
@@ -768,25 +762,6 @@ export default function Home() {
                   className="min-w-[120px] max-w-[180px] px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
                 <select
-                  value={codeFilters.domain}
-                  onChange={(e) =>
-                    setCodeFilters((f) => ({ ...f, domain: e.target.value }))
-                  }
-                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
-                >
-                  <option value="">全部领域</option>
-                  <option value="3DGS">3DGS</option>
-                  <option value="视频/世界模型">视频/世界模型</option>
-                  <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
-                  <option value="VR/AR">VR/AR</option>
-                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
-                  <option value="3D人体/角色">3D人体/角色</option>
-                  <option value="3DGS编辑">3DGS编辑</option>
-                  <option value="3DGS水下建模">3DGS水下建模</option>
-                  <option value="空间智能">空间智能</option>
-                </select>
-                <select
                   value={codeFilters.tag}
                   onChange={(e) =>
                     setCodeFilters((f) => ({ ...f, tag: e.target.value }))
@@ -864,25 +839,6 @@ export default function Home() {
                   }
                   className="min-w-[120px] max-w-[180px] px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
-                <select
-                  value={postFilters.domain}
-                  onChange={(e) =>
-                    setPostFilters((f) => ({ ...f, domain: e.target.value }))
-                  }
-                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
-                >
-                  <option value="">全部领域</option>
-                  <option value="3DGS">3DGS</option>
-                  <option value="视频/世界模型">视频/世界模型</option>
-                  <option value="3DGS物理仿真">3DGS物理仿真</option>
-                  <option value="3D重建/生成/渲染">3D重建/生成/渲染</option>
-                  <option value="VR/AR">VR/AR</option>
-                  <option value="可重光照/逆渲染">可重光照/逆渲染</option>
-                  <option value="3D人体/角色">3D人体/角色</option>
-                  <option value="3DGS编辑">3DGS编辑</option>
-                  <option value="3DGS水下建模">3DGS水下建模</option>
-                  <option value="空间智能">空间智能</option>
-                </select>
                 <select
                   value={postFilters.tag}
                   onChange={(e) =>

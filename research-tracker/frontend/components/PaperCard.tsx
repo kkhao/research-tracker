@@ -1,5 +1,7 @@
 import type { Paper } from "@/app/page";
 
+const SOURCE_TAGS = new Set(["ARXIV", "OPENREVIEW", "S2"]);
+
 const TAG_CLASSES: Record<string, string> = {
   "3DGS": "tag-3dgs",
   "视频/世界模型": "tag-video-world",
@@ -11,6 +13,12 @@ const TAG_CLASSES: Record<string, string> = {
   "3DGS编辑": "tag-3dgs-edit",
   "3DGS水下建模": "tag-underwater",
   "空间智能": "tag-spatial",
+  "CVPR": "tag-default",
+  "ICCV": "tag-default",
+  "ECCV": "tag-default",
+  "ICLR": "tag-default",
+  "NeurIPS": "tag-default",
+  "SIGGRAPH": "tag-default",
   "大模型": "tag-default",
 };
 
@@ -21,9 +29,11 @@ function getTagClass(tag: string): string {
 export default function PaperCard({ paper }: { paper: Paper }) {
   const date = paper.published_at ? paper.published_at.slice(0, 10) : "";
   const sourceLabel = paper.source ? paper.source.toUpperCase() : "ARXIV";
-  const tags = paper.tags && paper.tags.length > 0
+  const rawTags = paper.tags && paper.tags.length > 0
     ? paper.tags
     : paper.categories ? paper.categories.split(/[\s,]+/).filter(Boolean) : [];
+  // 排除来源标签（来源已在顶部单独展示），仅显示研究方向与会议
+  const tags = rawTags.filter((t) => !SOURCE_TAGS.has(t));
 
   return (
     <article className="group rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-5 shadow-[var(--card-shadow)] transition-all duration-200 hover:border-[var(--accent)]/30 hover:bg-[var(--bg-card-hover)] hover:shadow-[var(--card-shadow-hover)] hover:-translate-y-0.5">

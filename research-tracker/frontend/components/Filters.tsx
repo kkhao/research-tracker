@@ -31,22 +31,7 @@ const CATEGORIES = [
   { value: "eess.IV", label: "图像/视频处理" },
 ];
 
-// 与 backend/tagging.py PAPER_TAG_KEYWORDS 对齐
-const RESEARCH_DOMAINS = [
-  { value: "", label: "全部领域" },
-  { value: "3DGS", label: "3DGS" },
-  { value: "视频/世界模型", label: "视频/世界模型" },
-  { value: "3DGS物理仿真", label: "3DGS物理仿真" },
-  { value: "3D重建/生成/渲染", label: "3D重建/生成/渲染" },
-  { value: "VR/AR", label: "VR/AR" },
-  { value: "可重光照/逆渲染", label: "可重光照/逆渲染" },
-  { value: "3D人体/角色", label: "3D人体/角色" },
-  { value: "3DGS编辑", label: "3DGS编辑" },
-  { value: "3DGS水下建模", label: "3DGS水下建模" },
-  { value: "空间智能", label: "空间智能" },
-];
-
-// 与 backend/tagging.py PAPER_TAG_KEYWORDS 对齐
+// 与 backend/tagging.py 对齐：研究方向 + 会议
 const TAG_OPTIONS = [
   { value: "", label: "全部标签" },
   { value: "3DGS", label: "3DGS" },
@@ -103,20 +88,10 @@ export default function Filters({ filters, onChange, section = "main" }: Filters
           ))}
         </select>
         <select
-          value={RESEARCH_DOMAINS.some((d) => d.value === filters.tag) ? filters.tag : ""}
-          onChange={(e) => onChange({ ...filters, tag: e.target.value })}
-          className={inputClass}
-        >
-          {RESEARCH_DOMAINS.map((d) => (
-            <option key={d.value} value={d.value}>
-              {d.label}
-            </option>
-          ))}
-        </select>
-        <select
           value={filters.tag}
           onChange={(e) => onChange({ ...filters, tag: e.target.value })}
           className={inputClass}
+          title="研究方向与会议"
         >
           {TAG_OPTIONS.map((t) => (
             <option key={t.value} value={t.value}>
