@@ -47,6 +47,29 @@ def _build_search_keywords(max_count: int = 60) -> list[str]:
 
 ARXIV_SEARCH_KEYWORDS = _build_search_keywords(60)
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
+
+
+def _build_s2_keywords(tag: str | None = None) -> list[str]:
+    """与 arXiv 对齐：每个标签下每个关键词单独查询，保证全覆盖。tag 指定时仅该标签关键词。"""
+    tags_to_use = (
+        [(tag.strip(), PAPER_TAG_KEYWORDS[tag.strip()])]
+        if tag and tag.strip() and tag.strip() in PAPER_TAG_KEYWORDS
+        else list(PAPER_TAG_KEYWORDS.items())
+    )
+    result = []
+    seen = set()
+    for t, kws in tags_to_use:
+        for kw in kws:
+            k = kw.strip()
+            if len(k) < 3:
+                continue
+            require_3dgs = t in THREEDGS_REQUIRED_TAGS and t not in SEARCH_WITHOUT_3DGS_PREFIX
+            q = f"3dgs {k}" if require_3dgs else k
+            q_lower = q.lower()
+            if q_lower not in seen:
+                seen.add(q_lower)
+                result.append(q)
+    return result
 # 已去掉分类限制，不再限定 cs.CV/cs.LG 等
 
 OPENREVIEW_API = "https://api.openreview.net/notes"
@@ -656,12 +679,12 @@ def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> lis
     seen_ids = set()
     cutoff = datetime.now(timezone.utc) - timedelta(days=days + 1)  # 多 1 天缓冲
 
-    # 优先：crawl_keywords/s2_queries > ARXIV_SEARCH_KEYWORDS(60，与 arXiv 一致)
+    # 优先：crawl_keywords/s2_queries > 全量关键词（与 arXiv 对齐，每个标签每个关键词）
     queries = load_crawl_keywords("papers")
     if not queries:
         queries = _load_s2_queries()
     if not queries:
-        queries = ARXIV_SEARCH_KEYWORDS
+        queries = _build_s2_keywords()
 
     for i in range(0, len(queries), S2_WORKERS):
         batch = queries[i : i + S2_WORKERS]
