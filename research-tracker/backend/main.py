@@ -180,9 +180,9 @@ def list_papers(
 def refresh_papers(
     days: int = Query(15, ge=1, le=30),
     tag: str | None = Query(None, description="Only fetch/filter papers for this tag (3DGS, 视频/世界模型, etc.). arXiv: 按关键词抓取；S2: 抓取后按标签过滤入库。"),
-    source: str | None = Query(None, description="Fetch source: arxiv=仅 arXiv，s2=仅 S2，空=两个都抓。"),
+    source: str | None = Query(None, description="Fetch source: arxiv=仅 arXiv，s2=仅 S2，openreview=仅 OpenReview，空=全部。"),
 ):
-    """Trigger crawl to fetch new papers from arXiv, S2. source 可指定仅拉取 arxiv 或 s2。"""
+    """Trigger crawl to fetch new papers from arXiv, S2, OpenReview. source 可指定仅拉取某源。"""
     count, notifications = fetch_and_store(days=days, tag=tag, source=source)
     deleted = cleanup_papers_without_business_tags(openreview_only=False)
     _invalidate_tags_cache()

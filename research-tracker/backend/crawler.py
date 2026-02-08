@@ -735,8 +735,8 @@ def _matches_subscription(paper: dict, sub) -> bool:
 
 def fetch_and_store(days: int = 15, tag: str | None = None, source: str | None = None):
     """Fetch papers and store in database.
-    tag: 选定标签时 arXiv 按该标签关键词抓取；S2 抓取后按该标签关键词过滤入库。
-    source: 抓取来源，arxiv=仅 arXiv，s2=仅 S2，空=两个都抓。
+    tag: 选定标签时 arXiv 按该标签关键词抓取；S2/OpenReview 抓取后按该标签关键词过滤入库。
+    source: 抓取来源，arxiv=仅 arXiv，s2=仅 S2，openreview=仅 OpenReview，空=全部。
     """
     init_db()
     src = (source or "").strip().lower()
@@ -745,11 +745,14 @@ def fetch_and_store(days: int = 15, tag: str | None = None, source: str | None =
         papers = fetch_semantic_scholar_papers(days)
     elif src == "arxiv":
         papers = fetch_recent_papers(days=days, tag=tag)
+    elif src == "openreview":
+        papers = fetch_openreview_papers(days=days)
     else:
-        with ThreadPoolExecutor(max_workers=2) as ex:
+        with ThreadPoolExecutor(max_workers=3) as ex:
             fut_arxiv = ex.submit(fetch_recent_papers, days=days, tag=tag)
             fut_s2 = ex.submit(fetch_semantic_scholar_papers, days)
-            papers = fut_arxiv.result() + fut_s2.result()
+            fut_or = ex.submit(fetch_openreview_papers, days)
+            papers = fut_arxiv.result() + fut_s2.result() + fut_or.result()
 
     conn = get_connection()
     cursor = conn.cursor()

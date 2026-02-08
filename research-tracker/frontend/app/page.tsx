@@ -148,7 +148,7 @@ export default function Home() {
     to_date: "",
     min_citations: "",
   });
-  const [fetchSource, setFetchSource] = useState<"all" | "arxiv" | "s2">("all");
+  const [fetchSource, setFetchSource] = useState<"all" | "arxiv" | "s2" | "openreview">("all");
 
   const debouncedSearch = useDebounce(filters.search, 300);
   const debouncedAuthor = useDebounce(filters.author, 300);
@@ -733,13 +733,24 @@ export default function Home() {
               <div className="flex flex-wrap items-center gap-3 flex-1">
                 <Filters filters={filters} onChange={setFilters} section="main" />
                 <select
+                  value={filters.source}
+                  onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+                  className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
+                >
+                  <option value="">全部来源</option>
+                  <option value="arxiv">arXiv</option>
+                  <option value="openreview">OpenReview</option>
+                  <option value="s2">Semantic Scholar</option>
+                </select>
+                <select
                   value={fetchSource}
-                  onChange={(e) => setFetchSource(e.target.value as "all" | "arxiv" | "s2")}
+                  onChange={(e) => setFetchSource(e.target.value as "all" | "arxiv" | "s2" | "openreview")}
                   className="px-3 py-1.5 rounded-lg bg-[var(--tag-bg)] border border-[var(--border)] text-sm"
                 >
                   <option value="all">拉取全部</option>
                   <option value="arxiv">仅 arXiv</option>
                   <option value="s2">仅 S2</option>
+                  <option value="openreview">仅 OpenReview</option>
                 </select>
                 <button
                   onClick={handleRefresh}
