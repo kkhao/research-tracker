@@ -193,7 +193,7 @@ export default function Home() {
       if (effective.from_date) params.set("from_date", effective.from_date);
       if (effective.to_date) params.set("to_date", effective.to_date);
       if (effective.min_citations) params.set("min_citations", effective.min_citations);
-      params.set("limit", "100");
+      params.set("limit", "200");
 
       const res = await fetchApi(`/api/papers?${params}`, { signal: controller.signal });
       clearTimeout(timeoutId);

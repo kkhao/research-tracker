@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 from database import init_db, get_connection, migrate_diffusion_to_multimodal_tag
 from crawler import fetch_and_store, backfill_paper_tags, cleanup_papers_without_business_tags
+from cleanup import run_cleanup, run_vacuum
 from community_crawler import fetch_and_store_posts
 from company_crawler import fetch_and_store_company_posts, COMPANY_DIRECTIONS, _strip_html as strip_html
 from code_crawler import fetch_and_store_code_posts
@@ -204,6 +205,29 @@ def cleanup_papers(
     n = cleanup_papers_without_business_tags(openreview_only=openreview_only)
     _invalidate_tags_cache()
     return {"status": "ok", "papers_deleted": n}
+
+
+@app.post("/api/cleanup")
+def cleanup_by_retention(
+    papers_days: int = Query(365, ge=1, le=3650, description="Papers retention (days, default 365)"),
+    code_days: int = Query(365, ge=1, le=3650, description="Code posts retention, default 365"),
+    community_days: int = Query(90, ge=1, le=365, description="Community/company posts retention, default 90"),
+):
+    """Delete data by retention: papers 1y, code 1y, community/company 3mo."""
+    result = run_cleanup(
+        papers_keep_days=papers_days,
+        code_keep_days=code_days,
+        community_keep_days=community_days,
+    )
+    _invalidate_tags_cache()
+    return {"status": "ok", **result}
+
+
+@app.post("/api/cleanup/vacuum")
+def cleanup_vacuum():
+    """Reclaim disk space after deletes. Run after cleanup."""
+    run_vacuum()
+    return {"status": "ok"}
 
 
 @app.get("/api/posts")
