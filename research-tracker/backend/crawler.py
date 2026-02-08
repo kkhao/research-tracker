@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import sqlite3
 import threading
+import time
 import requests
 
 from database import get_connection, init_db, load_crawl_keywords
@@ -89,7 +90,8 @@ OPENREVIEW_VENUES = [
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
 S2_FIELDS = "paperId,title,abstract,authors,publicationDate,year,venue,publicationVenue,citationCount,externalIds,url"
 S2_WORKERS = 4  # 并行请求数，避免触发 S2 限流（100 次/5 分钟）
-S2_TIMEOUT = 20
+S2_TIMEOUT = 45  # 与 arXiv(60) 接近，S2 接口较慢易超时
+S2_RETRIES = 2  # 超时/连接失败时重试次数
 S2_DEFAULT_QUERIES = [
     "3D vision",
     "world model",
@@ -613,15 +615,25 @@ def _fetch_s2_single(
     limit: int,
     cutoff: datetime,
 ) -> list[dict]:
-    """Fetch papers for one S2 query. Returns list of paper dicts."""
+    """Fetch papers for one S2 query. Returns list of paper dicts. Retries on timeout/connection error."""
     params = {"query": query, "limit": limit, "fields": S2_FIELDS}
     headers = {"User-Agent": "ResearchTracker/1.0"}
-    try:
-        r = requests.get(S2_API, params=params, headers=headers, timeout=S2_TIMEOUT)
-        r.raise_for_status()
-        data = r.json()
-    except Exception:
-        return []
+    for attempt in range(S2_RETRIES + 1):
+        try:
+            r = requests.get(S2_API, params=params, headers=headers, timeout=S2_TIMEOUT)
+            r.raise_for_status()
+            data = r.json()
+            break
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            if attempt < S2_RETRIES:
+                log.warning("S2 query=%r attempt %d/%d failed: %s; retrying", query[:50], attempt + 1, S2_RETRIES + 1, e)
+                time.sleep(1)  # 重试前稍等
+            else:
+                log.warning("S2 query=%r failed after %d attempts: %s", query[:50], S2_RETRIES + 1, e)
+                return []
+        except Exception as e:
+            log.warning("S2 query=%r error: %s", query[:50], e)
+            return []
     result = []
     for item in data.get("data", []):
         paper_id = item.get("paperId")
@@ -674,7 +686,6 @@ def _fetch_s2_single(
 
 def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> list[dict]:
     """Fetch recent papers from Semantic Scholar. 按每个关键词查询，与 arXiv 对齐。"""
-    import time
     papers = []
     seen_ids = set()
     cutoff = datetime.now(timezone.utc) - timedelta(days=days + 1)  # 多 1 天缓冲
