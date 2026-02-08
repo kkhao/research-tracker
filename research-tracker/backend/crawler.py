@@ -65,7 +65,6 @@ OPENREVIEW_VENUES = [
 
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
 S2_FIELDS = "paperId,title,abstract,authors,publicationDate,year,venue,publicationVenue,citationCount,externalIds,url"
-S2_EARLY_EXIT = 200  # 达到此数量即停止，提速
 S2_WORKERS = 4  # 并行请求数，避免触发 S2 限流（100 次/5 分钟）
 S2_TIMEOUT = 20
 S2_DEFAULT_QUERIES = [
@@ -651,25 +650,22 @@ def _fetch_s2_single(
 
 
 def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> list[dict]:
-    """Fetch recent papers from Semantic Scholar (public Graph API). Parallel requests with S2_WORKERS."""
+    """Fetch recent papers from Semantic Scholar. 按每个关键词查询，与 arXiv 对齐。"""
+    import time
     papers = []
     seen_ids = set()
     cutoff = datetime.now(timezone.utc) - timedelta(days=days + 1)  # 多 1 天缓冲
 
-    # 优先用精简关键词：crawl_keywords/s2_queries > S2_DEFAULT_QUERIES(26) > ARXIV_SEARCH_KEYWORDS(60)
+    # 优先：crawl_keywords/s2_queries > ARXIV_SEARCH_KEYWORDS(60，与 arXiv 一致)
     queries = load_crawl_keywords("papers")
     if not queries:
         queries = _load_s2_queries()
     if not queries:
-        queries = S2_DEFAULT_QUERIES  # 26 个，比 ARXIV_SEARCH_KEYWORDS(60) 少，加快抓取
-    if not queries:
         queries = ARXIV_SEARCH_KEYWORDS
 
     for i in range(0, len(queries), S2_WORKERS):
-        if len(papers) >= max_results or len(papers) >= S2_EARLY_EXIT:
-            break
         batch = queries[i : i + S2_WORKERS]
-        limit = min(50, max_results - len(papers))
+        limit = min(50, max(10, (max_results - len(papers)) // max(1, len(batch))))
         with ThreadPoolExecutor(max_workers=S2_WORKERS) as ex:
             futures = {
                 ex.submit(_fetch_s2_single, q, limit, cutoff): q
@@ -682,6 +678,8 @@ def fetch_semantic_scholar_papers(days: int = 15, max_results: int = 400) -> lis
                     if pid not in seen_ids:
                         seen_ids.add(pid)
                         papers.append(p)
+        if i + S2_WORKERS < len(queries):
+            time.sleep(2)  # 避免 S2 限流
 
     papers.sort(key=lambda x: x["published_at"] or "", reverse=True)
     return papers[:max_results]
