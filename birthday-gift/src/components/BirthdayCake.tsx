@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import confetti from "canvas-confetti";
 
 const CANDLE_COUNT = 4;
@@ -13,6 +13,7 @@ export default function BirthdayCake({ onBlowStart }: Props) {
   const [blownOut, setBlownOut] = useState(false);
   const [birthdaySongPlaying, setBirthdaySongPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const birthdayAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const triggerConfetti = useCallback(() => {
     const duration = 3000;
@@ -46,7 +47,9 @@ export default function BirthdayCake({ onBlowStart }: Props) {
     triggerConfetti();
     setBirthdaySongPlaying(true);
     const audio = new Audio("/birthday-song.mp3");
+    birthdayAudioRef.current = audio;
     audio.volume = 0.6;
+    audio.loop = true;
     audio.play().catch((e) => {
       setBirthdaySongPlaying(false);
       setAudioError("无法播放生日歌，请确认 public/birthday-song.mp3 存在且可访问");
@@ -54,6 +57,18 @@ export default function BirthdayCake({ onBlowStart }: Props) {
     });
     audio.onended = () => setBirthdaySongPlaying(false);
   }, [blownOut, triggerConfetti, onBlowStart]);
+
+  const toggleBirthdaySong = useCallback(() => {
+    const audio = birthdayAudioRef.current;
+    if (!audio) return;
+    if (birthdaySongPlaying) {
+      audio.pause();
+      setBirthdaySongPlaying(false);
+    } else {
+      audio.play().then(() => setBirthdaySongPlaying(true)).catch(() => {});
+      audio.onended = () => setBirthdaySongPlaying(false);
+    }
+  }, [birthdaySongPlaying]);
 
   return (
     <div className="flex flex-col items-center">
@@ -107,6 +122,18 @@ export default function BirthdayCake({ onBlowStart }: Props) {
             <p className="text-rose-700 font-medium">
               {birthdaySongPlaying ? "🎵 生日快乐～" : "谢谢宝贝，妈妈爱你～"}
             </p>
+            {!audioError && (
+              <div className="mt-3 flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleBirthdaySong}
+                  className="rounded-xl bg-rose-100 px-4 py-2 text-rose-700 font-medium hover:bg-rose-200 transition-colors"
+                  aria-label={birthdaySongPlaying ? "暂停生日歌" : "播放生日歌"}
+                >
+                  {birthdaySongPlaying ? "⏸ 暂停" : "▶ 播放"}
+                </button>
+              </div>
+            )}
             {audioError && (
               <p className="mt-2 text-sm text-amber-600">{audioError}</p>
             )}

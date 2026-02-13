@@ -4,9 +4,11 @@ import { useState, useRef, useEffect } from "react";
 
 type Props = {
   onRegisterPause?: (pause: () => void) => void;
+  onRegisterPlay?: (play: () => void) => void;
+  onPlayStateChange?: (playing: boolean) => void;
 };
 
-export default function MusicControl({ onRegisterPause }: Props) {
+export default function MusicControl({ onRegisterPause, onRegisterPlay, onPlayStateChange }: Props) {
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -15,16 +17,29 @@ export default function MusicControl({ onRegisterPause }: Props) {
     const audio = new Audio("/birthday-bg.mp3");
     audioRef.current = audio;
     audio.volume = 0.4;
+    audio.loop = true;
     onRegisterPause?.(() => {
       audio.pause();
       setPlaying(false);
     });
+    const doPlay = () => {
+      audio.volume = 0.4;
+      audio.play().then(() => {
+        setError(null); // 播放成功时清除之前的错误提示
+        setPlaying(true);
+        onPlayStateChange?.(true);
+      }).catch((e) => {
+        setError("无法播放，请确认 public/birthday-bg.mp3 存在");
+        console.warn("Background audio failed:", e);
+      });
+    };
+    onRegisterPlay?.(doPlay);
     // 尝试自动播放（多数浏览器会拦截，需用户先与页面交互）
-    audio.play().then(() => setPlaying(true)).catch(() => {});
+    doPlay();
     return () => {
       audio.pause();
     };
-  }, []); // 仅挂载时注册一次 pause 回调
+  }, []);
 
   const toggle = () => {
     const audio = audioRef.current;
@@ -33,9 +48,14 @@ export default function MusicControl({ onRegisterPause }: Props) {
     if (playing) {
       audio.pause();
       setPlaying(false);
+      onPlayStateChange?.(false);
     } else {
       audio.volume = 0.4;
-      audio.play().then(() => setPlaying(true)).catch((e) => {
+      audio.play().then(() => {
+        setError(null);
+        setPlaying(true);
+        onPlayStateChange?.(true);
+      }).catch((e) => {
         setError("无法播放，请确认 public/birthday-bg.mp3 存在");
         console.warn("Background audio failed:", e);
       });
