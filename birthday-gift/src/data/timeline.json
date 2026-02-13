@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "year": 2015,
+    "title": "我们相识",
+    "shortDesc": "故事的开始",
+    "narrative": "那一年我们相遇，从此生命有了新的色彩。",
+    "media": [{ "type": "image", "url": "", "alt": "相识" }],
+    "audio": null
+  },
+  {
+    "id": "2",
+    "year": 2018,
+    "title": "我们结婚",
+    "shortDesc": "携手一生",
+    "narrative": "从两个人变成一家人，许下一生的承诺。",
+    "media": [{ "type": "image", "url": "", "alt": "结婚" }],
+    "audio": null
+  },
+  {
+    "id": "3",
+    "year": 2019,
+    "title": "宝贝出生",
+    "shortDesc": "三口之家",
+    "narrative": "我们的小公主来到了这个世界，家里多了无数的欢笑。",
+    "media": [{ "type": "image", "url": "", "alt": "女儿出生" }],
+    "audio": null
+  },
+  {
+    "id": "4",
+    "year": 2026,
+    "title": "妈妈32岁生日",
+    "shortDesc": "爱与感恩",
+    "narrative": "感谢你为这个家付出的一切。新的一岁，我们继续一起书写幸福。",
+    "media": [],
+    "audio": null
+  }
+]
