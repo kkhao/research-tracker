@@ -23,7 +23,7 @@ export default function LottieCharacter({
   const [lottieData, setLottieData] = useState<object | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
-  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
 
   useEffect(() => {
     if (!src) return;
