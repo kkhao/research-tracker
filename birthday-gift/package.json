@@ -12,6 +12,7 @@
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/slim": "^3.0.0",
     "canvas-confetti": "^1.9.3",
+    "lottie-react": "^2.4.1",
     "next": "^14.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

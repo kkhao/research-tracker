@@ -8,10 +8,14 @@ export default function ParticleBackground() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const timeout = window.setTimeout(() => setReady(true), 4000);
     initParticlesEngine(async (engine) => {
       await loadSlim(engine);
       setReady(true);
-    });
+    })
+      .catch(() => setReady(true))
+      .finally(() => window.clearTimeout(timeout));
+    return () => window.clearTimeout(timeout);
   }, []);
 
   if (!ready) return <div className="fixed inset-0 -z-10" />;

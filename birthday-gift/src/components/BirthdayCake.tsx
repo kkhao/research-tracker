@@ -16,26 +16,51 @@ export default function BirthdayCake({ onBlowStart }: Props) {
   const birthdayAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const triggerConfetti = useCallback(() => {
-    const duration = 3000;
-    const end = Date.now() + duration;
     const colors = ["#f8b4c4", "#e8a0a8", "#e8c547", "#fff"];
+    const origin = { x: 0.5, y: 0.35 };
 
-    (function frame() {
+    const burst = (count: number, spread: number, scalar = 1) => {
       confetti({
-        particleCount: 3,
+        particleCount: count,
+        angle: 90,
+        spread,
+        origin,
+        colors,
+        scalar,
+        gravity: 0.8 + Math.random() * 0.4,
+        drift: 0.5 + Math.random() * 0.5,
+      });
+    };
+
+    burst(14, 100, 1);
+    setTimeout(() => burst(12, 95, 1.05), 120);
+    setTimeout(() => burst(10, 110, 0.95), 240);
+
+    const duration = 2800;
+    const end = Date.now() + duration;
+    (function frame() {
+      if (Date.now() >= end) return;
+      confetti({
+        particleCount: 2,
         angle: 60,
         spread: 55,
-        origin: { x: 0 },
+        origin: { x: 0.4, y: 0.35 },
         colors,
+        scalar: 0.9,
+        gravity: 1,
+        drift: 0.3,
       });
       confetti({
-        particleCount: 3,
+        particleCount: 2,
         angle: 120,
         spread: 55,
-        origin: { x: 1 },
+        origin: { x: 0.6, y: 0.35 },
         colors,
+        scalar: 0.9,
+        gravity: 1,
+        drift: -0.3,
       });
-      if (Date.now() < end) requestAnimationFrame(frame);
+      requestAnimationFrame(frame);
     })();
   }, []);
 
@@ -73,7 +98,7 @@ export default function BirthdayCake({ onBlowStart }: Props) {
   return (
     <div className="flex flex-col items-center">
       {/* 贺卡式容器 */}
-      <div className="relative bg-white/95 rounded-3xl shadow-2xl px-10 py-8 max-w-md border-2 border-rose-200/60">
+      <div className="relative bg-white/95 rounded-3xl shadow-2xl px-10 py-8 max-w-md border-2 border-rose-200/60 cake-shadow">
         <p className="text-center text-rose-800 text-lg font-medium mb-4">
           送给最爱的你 · 2026.02.18
         </p>
@@ -83,26 +108,40 @@ export default function BirthdayCake({ onBlowStart }: Props) {
           {/* 蜡烛 */}
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex gap-4 z-10">
             {Array.from({ length: CANDLE_COUNT }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center">
+              <div key={i} className="flex flex-col items-center relative">
                 <div
                   className={`w-1 h-8 rounded-full ${
                     blownOut ? "bg-gray-400" : "bg-amber-100"
                   }`}
                 />
                 <div
-                  className={`w-3 h-4 -mt-1 rounded-b-full transition-all duration-300 ${
+                  className={`w-3 h-4 -mt-1 rounded-b-full ${
                     blownOut
                       ? "flame-out bg-gray-500"
                       : "flame bg-amber-400 shadow-lg shadow-amber-400/50"
                   }`}
+                  style={
+                    blownOut
+                      ? { animationDelay: `${i * 90}ms` }
+                      : undefined
+                  }
                 />
+                {blownOut && (
+                  <div
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-gray-400/60 flame-smoke"
+                    style={{ animationDelay: `${i * 90 + 200}ms` }}
+                    aria-hidden
+                  />
+                )}
               </div>
             ))}
           </div>
 
           {/* 蛋糕体 */}
           <div className="mt-6 w-44">
-            <div className="h-4 rounded-t-lg bg-gradient-to-b from-cake-cream to-amber-100 shadow-inner" />
+            <div className="relative h-4 rounded-t-lg bg-gradient-to-b from-cake-cream to-amber-100 shadow-inner overflow-hidden">
+              <div className="absolute inset-0 rounded-t-lg cake-shine" aria-hidden />
+            </div>
             <div className="h-10 rounded-b-lg bg-gradient-to-b from-cake-pink to-rose-300 shadow-md" />
             <div className="h-3 rounded-b-xl bg-gradient-to-b from-rose-400 to-rose-500" />
           </div>

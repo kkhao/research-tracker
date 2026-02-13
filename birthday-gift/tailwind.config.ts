@@ -18,6 +18,7 @@ const config: Config = {
       animation: {
         "flicker": "flicker 0.15s ease-in-out infinite alternate",
         "float": "float 3s ease-in-out infinite",
+        "rose-float": "rose-float 5s ease-in-out infinite",
       },
       keyframes: {
         flicker: {
@@ -27,6 +28,10 @@ const config: Config = {
         float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-8px)" },
+        },
+        "rose-float": {
+          "0%, 100%": { transform: "translateY(0) rotate(-5deg)" },
+          "50%": { transform: "translateY(-15px) rotate(5deg)" },
         },
       },
     },
