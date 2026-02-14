@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { getSiteConfig } from "@/data/siteConfig";
 
-export const metadata: Metadata = {
-  title: "送给最爱的你 — 生日快乐",
-  description: "我们的时光 · 爱 · 庆典",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { pageTitle, pageDescription } = getSiteConfig();
+  return { title: pageTitle, description: pageDescription };
+}
 
 export default function RootLayout({
   children,

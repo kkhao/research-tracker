@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Long+Cang&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,6 +9,17 @@
   --pink: #f8b4c4;
   --gold: #e8c547;
   --rose: #e8a0a8;
+  --font-romantic: "Long Cang", "Ma Shan Zheng", cursive;
+}
+
+/* 浪漫标题：渐变字色（含 fallback）+ 浪漫字体 */
+.title-romantic-text {
+  font-family: var(--font-romantic);
+  color: #c73659;
+  background: linear-gradient(90deg, #b91c3c 0%, #be185d 50%, #b91c3c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 body {
@@ -71,6 +84,32 @@ body {
 .flame-out {
   animation: flame-blow-out 0.45s ease-out forwards;
   transform-origin: bottom center;
+}
+
+/* 标题柔和光晕 */
+@keyframes title-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(232, 160, 168, 0.6)) drop-shadow(0 0 16px rgba(248, 180, 196, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(232, 160, 168, 0.8)) drop-shadow(0 0 28px rgba(248, 180, 196, 0.5));
+  }
+}
+
+/* 标题轻微呼吸缩放 */
+@keyframes title-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* 浪漫组合：光晕 + 呼吸（与 .title-romantic-text 一起用于标题） */
+.title-romantic {
+  animation: title-glow 2.5s ease-in-out infinite, title-breathe 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.title-glow {
+  animation: title-glow 2.5s ease-in-out infinite;
 }
 
 /* 吹灭后的轻烟 */

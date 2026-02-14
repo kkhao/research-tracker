@@ -8,6 +8,7 @@ import BirthdayCake from "@/components/BirthdayCake";
 import BlessingCarousel from "@/components/BlessingCarousel";
 import MusicControl from "@/components/MusicControl";
 import FamilySceneFallback from "@/components/FamilySceneFallback";
+import { useSiteConfig } from "@/contexts/SiteConfigContext";
 
 const ParticleBackground = dynamic(() => import("@/components/ParticleBackground"), { ssr: false });
 const FireworksCanvas = dynamic(() => import("@/components/FireworksCanvas"), { ssr: false });
@@ -22,6 +23,7 @@ const FamilyScene = dynamic(
 );
 
 export default function HomePageContent() {
+  const config = useSiteConfig();
   const pauseBackgroundMusicRef = useRef<(() => void) | null>(null);
   const playBackgroundMusicRef = useRef<(() => void) | null>(null);
   const [showMusicOverlay, setShowMusicOverlay] = useState(true);
@@ -43,7 +45,7 @@ export default function HomePageContent() {
             playBackgroundMusicRef.current?.();
             setShowMusicOverlay(false);
           }}
-          className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity"
           aria-label="点击开启背景音乐"
         >
           <span className="rounded-2xl bg-white/95 px-8 py-4 text-lg font-medium text-rose-800 shadow-xl border-2 border-rose-200">
@@ -57,23 +59,27 @@ export default function HomePageContent() {
           <FamilyScene />
         </div>
 
-        <BirthdayCake onBlowStart={() => pauseBackgroundMusicRef.current?.()} />
+        {config.showCake && (
+          <BirthdayCake onBlowStart={() => pauseBackgroundMusicRef.current?.()} />
+        )}
         <BlessingCarousel />
 
-        <nav className="mt-12 flex flex-wrap justify-center gap-4">
-          <Link
-            href="/timeline"
-            className="px-6 py-3 rounded-2xl bg-white/90 border-2 border-rose-200 text-rose-700 font-medium hover:bg-rose-50 hover:border-rose-300 transition-colors shadow"
-          >
-            进入我们的时光
-          </Link>
-          <Link
-            href="/wishes"
-            className="px-6 py-3 rounded-2xl bg-white/90 border-2 border-rose-200 text-rose-700 font-medium hover:bg-rose-50 hover:border-rose-300 transition-colors shadow"
-          >
-            写下我们的愿望
-          </Link>
-        </nav>
+        {config.showNav && (
+          <nav className="mt-12 flex flex-wrap justify-center gap-4">
+            <Link
+              href="/timeline"
+              className="px-6 py-3 rounded-2xl bg-white/90 border-2 border-rose-200 text-rose-700 font-medium hover:bg-rose-50 hover:border-rose-300 transition-colors shadow"
+            >
+              进入我们的时光
+            </Link>
+            <Link
+              href="/wishes"
+              className="px-6 py-3 rounded-2xl bg-white/90 border-2 border-rose-200 text-rose-700 font-medium hover:bg-rose-50 hover:border-rose-300 transition-colors shadow"
+            >
+              写下我们的愿望
+            </Link>
+          </nav>
+        )}
       </div>
     </ErrorBoundary>
   );

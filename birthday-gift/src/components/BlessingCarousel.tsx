@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import blessings from "@/data/blessings.json";
+import { useSiteConfig } from "@/contexts/SiteConfigContext";
 
 export default function BlessingCarousel() {
+  const { blessings } = useSiteConfig();
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -11,7 +12,7 @@ export default function BlessingCarousel() {
       setIndex((i) => (i + 1) % blessings.length);
     }, 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [blessings.length]);
 
   return (
     <div className="mt-8 max-w-xl mx-auto px-4">

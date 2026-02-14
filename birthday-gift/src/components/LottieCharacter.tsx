@@ -55,39 +55,44 @@ export default function LottieCharacter({
 
   return (
     <div className={className}>
-      {useVideo && (
-        <video
-          src={videoSrc}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className={`w-full h-full object-contain ${videoReady ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
-          onCanPlay={() => {
-            if (loadTimeoutRef.current) {
-              window.clearTimeout(loadTimeoutRef.current);
-              loadTimeoutRef.current = null;
-            }
-            setVideoReady(true);
-          }}
-          onError={() => setVideoError(true)}
-          aria-hidden
-        />
-      )}
-      {!showVideo && (
-        <>
-          {showLottie ? (
-            <Lottie key={src ?? videoSrc} animationData={lottieData} loop />
-          ) : (
-            <div
-              className="flex items-center justify-center w-full h-full text-5xl md:text-6xl animate-float"
+      <div className="w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40 relative">
+        {useVideo && (
+          <>
+            <video
+              src={videoSrc}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className={`w-full h-full object-contain ${videoReady ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}
+              onCanPlay={() => {
+                if (loadTimeoutRef.current) {
+                  window.clearTimeout(loadTimeoutRef.current);
+                  loadTimeoutRef.current = null;
+                }
+                setVideoReady(true);
+              }}
+              onError={() => setVideoError(true)}
               aria-hidden
-            >
-              {fallback}
-            </div>
-          )}
-        </>
-      )}
+            />
+            <div className="absolute inset-0 rounded-full pointer-events-none bg-rose-200/15" aria-hidden />
+          </>
+        )}
+        {!showVideo && (
+          <>
+            {showLottie ? (
+              <Lottie key={src ?? videoSrc} animationData={lottieData} loop />
+            ) : (
+              <div
+                className="flex items-center justify-center w-full h-full text-5xl md:text-6xl animate-float"
+                aria-hidden
+              >
+                {fallback}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

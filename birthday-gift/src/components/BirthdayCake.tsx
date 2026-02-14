@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import confetti from "canvas-confetti";
 
 const CANDLE_COUNT = 4;
 
@@ -16,11 +15,12 @@ export default function BirthdayCake({ onBlowStart }: Props) {
   const birthdayAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const triggerConfetti = useCallback(() => {
-    const colors = ["#f8b4c4", "#e8a0a8", "#e8c547", "#fff"];
-    const origin = { x: 0.5, y: 0.35 };
+    void import("canvas-confetti").then(({ default: confetti }) => {
+      const colors = ["#f8b4c4", "#e8a0a8", "#e8c547", "#fff"];
+      const origin = { x: 0.5, y: 0.35 };
 
-    const burst = (count: number, spread: number, scalar = 1) => {
-      confetti({
+      const burst = (count: number, spread: number, scalar = 1) => {
+        confetti({
         particleCount: count,
         angle: 90,
         spread,
@@ -62,6 +62,7 @@ export default function BirthdayCake({ onBlowStart }: Props) {
       });
       requestAnimationFrame(frame);
     })();
+    });
   }, []);
 
   const handleBlowCandles = useCallback(() => {

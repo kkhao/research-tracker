@@ -2,12 +2,14 @@
 
 import LottieCharacter from "./LottieCharacter";
 import { ROSE_POSITIONS } from "@/data/rosePositions";
+import { useSiteConfig } from "@/contexts/SiteConfigContext";
 
 export default function FamilyScene() {
+  const config = useSiteConfig();
   return (
     <section
       className="relative mx-auto w-full max-w-2xl aspect-[4/3] min-h-[280px] md:min-h-[360px]"
-      aria-label="小羊送 99 朵玫瑰给两只小狗"
+      aria-label={config.ariaLabel}
     >
       {/* 玫瑰环绕 */}
       {ROSE_POSITIONS.map((pos, i) => (
@@ -25,12 +27,12 @@ export default function FamilyScene() {
         </div>
       ))}
 
-      {/* 小羊（老公）— 左侧居中 */}
+      {/* 小羊（老公）— 左侧居中，稍小 */}
       <LottieCharacter
         videoSrc="/sheep.mp4"
         src="/sheep.json"
         fallback="🐑"
-        className="absolute left-[6%] top-1/2 -translate-y-1/2 w-24 h-24 md:w-32 md:h-32 z-10"
+        className="absolute left-[6%] top-1/2 -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10"
       />
 
       {/* 小狗（妻子）— 心尖位置 */}
@@ -51,20 +53,17 @@ export default function FamilyScene() {
         className="absolute right-[6%] top-1/2 -translate-y-1/2 w-24 h-24 md:w-32 md:h-32 z-10"
       />
 
-      {/* 心形上方：大宝，生日快乐 + 我和宝宝永远爱你 */}
-      <div className="absolute left-1/2 top-[2%] -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">
-        <h2 className="text-xl md:text-2xl font-bold text-rose-800 whitespace-nowrap animate-float">
-          大宝，生日快乐 🎉
+      {/* 心形上方：主标题 */}
+      <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">
+        <h2 className={`font-bold ${config.titleClassName ?? "text-xl md:text-2xl text-rose-800 whitespace-nowrap animate-float"}`}>
+          {config.title}
         </h2>
-        <p className="text-rose-600 text-sm md:text-base mt-1 whitespace-nowrap">
-          我和宝宝永远爱你
-        </p>
       </div>
 
       {/* 中央文案 */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[5] pointer-events-none text-center">
         <span className="text-rose-700/90 text-sm md:text-base font-medium whitespace-nowrap">
-          99 朵玫瑰 · 送给最爱的你
+          {config.centerText}
         </span>
       </div>
     </section>
