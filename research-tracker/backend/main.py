@@ -318,7 +318,17 @@ def list_posts(
             "created_at": r["created_at"],
         }
 
-    return [_clean_post(dict(r)) for r in rows]
+    result = [_clean_post(dict(r)) for r in rows]
+    # 代码/社区动态：仅返回至少有一个研究方向标签的帖子（公司动态不过滤）
+    filtered = []
+    for p in result:
+        if p["source"] not in POST_SOURCES_REQUIRE_TAG:
+            filtered.append(p)
+        else:
+            research_tags = [t for t in (p.get("tags") or []) if t not in SOURCE_ONLY_TAGS]
+            if research_tags:
+                filtered.append(p)
+    return filtered
 
 
 @app.post("/api/refresh-posts")
@@ -378,6 +388,8 @@ def _invalidate_tags_cache():
 
 # 来源不参与标签筛选，仅用 source 字段；从 /api/tags 下拉中排除
 SOURCE_ONLY_TAGS = frozenset({"HN", "Reddit", "GitHub", "YouTube", "Hugging Face"})
+# 代码/社区动态：仅返回至少有一个研究方向标签的帖子（公司动态不过滤）
+POST_SOURCES_REQUIRE_TAG = frozenset({"github", "huggingface", "hn", "reddit", "youtube"})
 
 
 @app.get("/api/tags")
