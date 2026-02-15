@@ -383,6 +383,38 @@ def refresh_company_posts(days: int = Query(90, ge=1, le=365)):
     return {"status": "ok", "posts_added": count, "errors": errors}
 
 
+@app.post("/api/retag-posts")
+def retag_all_posts():
+    """Re-compute tags for ALL posts using current tagging logic.
+    Use after tagging rules change to fix stale tags in DB."""
+    from tagging import tag_post, tags_to_str, tag_company_post
+    from company_crawler import COMPANY_DIRECTIONS
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, source, title, summary, channel, author FROM posts")
+    rows = cursor.fetchall()
+    updated = 0
+    for r in rows:
+        src = r["source"] or ""
+        if src == "company":
+            tags = tags_to_str(tag_company_post(
+                r["title"] or "", r["summary"] or "",
+                r["channel"] or "", r["author"] or "",
+                COMPANY_DIRECTIONS,
+            ))
+        else:
+            tags = tags_to_str(tag_post(
+                r["title"] or "", r["summary"] or "",
+                src, r["channel"],
+            ))
+        cursor.execute("UPDATE posts SET tags = ? WHERE id = ?", (tags, r["id"]))
+        updated += 1
+    conn.commit()
+    conn.close()
+    _invalidate_tags_cache()
+    return {"status": "ok", "posts_updated": updated}
+
+
 _TAGS_CACHE: list[str] | None = None
 _TAGS_CACHE_AT: float = 0
 _TAGS_CACHE_TTL = 300  # 5 minutes
