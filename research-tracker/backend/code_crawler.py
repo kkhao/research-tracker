@@ -12,6 +12,8 @@ GITHUB_API = "https://api.github.com/search/repositories"
 HF_API = "https://huggingface.co/api/models"
 
 CODE_PER_KEYWORD = min(30, max(10, int(os.getenv("CODE_PER_KEYWORD", "20"))))
+TARGET_DISPLAY_POSTS = max(50, int(os.getenv("TARGET_DISPLAY_POSTS", "200")))
+FETCH_SAFETY_FACTOR = float(os.getenv("FETCH_SAFETY_FACTOR", "2.4"))  # 反推抓取预算：考虑去重/无标签过滤
 
 
 def _parse_date(s: str | None) -> datetime | None:
@@ -121,6 +123,39 @@ def _normalize_url(url: str) -> str:
         return url
 
 
+def _days_scale(days: int | None) -> float:
+    if not days or days >= 365:
+        return 2.0
+    if days <= 30:
+        return 1.0
+    if days <= 90:
+        return 1.7
+    return 2.0
+
+
+def _compute_code_budgets(days: int | None, keyword_count: int) -> tuple[int, int, int]:
+    """
+    Dynamic fetch budget based on final display target.
+    Returns: (github_per_keyword, hf_per_keyword, max_total_candidates)
+    """
+    kw_count = max(1, keyword_count)
+    desired_raw = int(TARGET_DISPLAY_POSTS * FETCH_SAFETY_FACTOR * _days_scale(days))
+    desired_raw = max(TARGET_DISPLAY_POSTS, desired_raw)
+    # 两个来源均会抓取：GitHub + HuggingFace
+    per_source_budget = max(kw_count, desired_raw // 2)
+
+    gh_per_keyword = max(CODE_PER_KEYWORD, per_source_budget // kw_count)
+    hf_per_keyword = max(CODE_PER_KEYWORD, per_source_budget // kw_count)
+    # API 上限保护
+    gh_per_keyword = min(100, gh_per_keyword)  # GitHub Search per_page <= 100
+    hf_per_keyword = min(50, hf_per_keyword)   # HF models API limit <= 50
+
+    # 候选总量上限，避免无限膨胀
+    max_total_candidates = max(desired_raw, TARGET_DISPLAY_POSTS * 2)
+    max_total_candidates = min(max_total_candidates, 5000)
+    return gh_per_keyword, hf_per_keyword, max_total_candidates
+
+
 def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) -> int:
     """Fetch GitHub and Hugging Face posts and store in DB.
     days: only fetch items created in last N days (30/90). None = no filter (all).
@@ -139,6 +174,8 @@ def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) 
         cutoff_dt = cutoff
 
     def _add_post(p):
+        if len(all_posts) >= max_total_candidates:
+            return
         if p["id"] in seen_ids:
             return
         norm_url = _normalize_url(p.get("url") or "")
@@ -163,17 +200,22 @@ def fetch_and_store_code_posts(days: int | None = None, tag: str | None = None) 
             keywords = ["3D Gaussian Splatting", "world model", "physics simulation", "3D reconstruction", "embodied AI"]
 
     kw_lower = [k.lower() for k in keywords]
+    gh_per_keyword, hf_per_keyword, max_total_candidates = _compute_code_budgets(days, len(kw_lower))
 
     def _fetch_github_batch():
         out = []
         for kw in kw_lower:
-            out.extend(_fetch_github(kw, max_results=CODE_PER_KEYWORD, created_since=created_since))
+            if len(out) >= max_total_candidates:
+                break
+            out.extend(_fetch_github(kw, max_results=gh_per_keyword, created_since=created_since))
         return out
 
     def _fetch_hf_batch():
         out = []
         for kw in kw_lower:
-            out.extend(_fetch_huggingface(kw, max_results=CODE_PER_KEYWORD, cutoff_dt=cutoff_dt))
+            if len(out) >= max_total_candidates:
+                break
+            out.extend(_fetch_huggingface(kw, max_results=hf_per_keyword, cutoff_dt=cutoff_dt))
         return out
 
     with ThreadPoolExecutor(max_workers=2) as ex:

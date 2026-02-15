@@ -19,6 +19,8 @@ YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
 REDDIT_SUBS = ["MachineLearning", "computervision", "LocalLLaMA"]
 # 每个关键词抓取条数（10-20），Reddit 按子版块 limit 单独设置
 COMMUNITY_PER_KEYWORD = min(20, max(10, int(os.getenv("COMMUNITY_PER_KEYWORD", "15"))))
+TARGET_DISPLAY_POSTS = max(50, int(os.getenv("TARGET_DISPLAY_POSTS", "200")))
+FETCH_SAFETY_FACTOR = float(os.getenv("FETCH_SAFETY_FACTOR", "2.6"))  # 社区噪声更高，预算略放大
 
 
 def _get_proxies() -> dict | None:
@@ -199,6 +201,49 @@ def _normalize_url(url: str) -> str:
         return url
 
 
+def _days_scale(days: int | None) -> float:
+    if not days or days >= 365:
+        return 2.1
+    if days <= 30:
+        return 1.0
+    if days <= 90:
+        return 1.8
+    return 2.1
+
+
+def _compute_community_budgets(
+    days: int | None,
+    keyword_count: int,
+    fetch_hn: bool,
+    fetch_reddit: bool,
+    fetch_youtube: bool,
+) -> tuple[int, int, int, int]:
+    """
+    Dynamic fetch budget based on final display target.
+    Returns: (hn_per_keyword, reddit_per_sub, youtube_per_keyword, max_total_candidates)
+    """
+    kw_count = max(1, keyword_count)
+    desired_raw = int(TARGET_DISPLAY_POSTS * FETCH_SAFETY_FACTOR * _days_scale(days))
+    desired_raw = max(TARGET_DISPLAY_POSTS, desired_raw)
+
+    active_sources = int(fetch_hn) + int(fetch_reddit) + int(fetch_youtube)
+    active_sources = max(1, active_sources)
+    per_source_budget = max(kw_count, desired_raw // active_sources)
+
+    hn_per_keyword = max(COMMUNITY_PER_KEYWORD, per_source_budget // kw_count) if fetch_hn else 0
+    youtube_per_keyword = max(COMMUNITY_PER_KEYWORD, per_source_budget // kw_count) if fetch_youtube else 0
+    reddit_per_sub = max(COMMUNITY_PER_KEYWORD, per_source_budget // max(1, len(REDDIT_SUBS))) if fetch_reddit else 0
+
+    # API 上限保护
+    hn_per_keyword = min(50, hn_per_keyword)
+    youtube_per_keyword = min(50, youtube_per_keyword)
+    reddit_per_sub = min(100, reddit_per_sub)
+
+    max_total_candidates = max(desired_raw, TARGET_DISPLAY_POSTS * 2)
+    max_total_candidates = min(max_total_candidates, 6000)
+    return hn_per_keyword, reddit_per_sub, youtube_per_keyword, max_total_candidates
+
+
 def fetch_and_store_posts(
     days: int = 7,
     tag: str | None = None,
@@ -220,6 +265,8 @@ def fetch_and_store_posts(
     cutoff_ts = int(cutoff.timestamp())
 
     def _add_post(p):
+        if len(all_posts) >= max_total_candidates:
+            return
         if p["id"] in seen_ids:
             return
         norm_url = _normalize_url(p.get("url") or "")
@@ -247,26 +294,39 @@ def fetch_and_store_posts(
     fetch_hn = not src or src == "hn"
     fetch_reddit = (not src or src == "reddit") and (not tag or not tag.strip() or tag.strip() not in PAPER_TAG_KEYWORDS)
     fetch_youtube = not src or src == "youtube"
+    hn_per_keyword, reddit_per_sub, youtube_per_keyword, max_total_candidates = _compute_community_budgets(
+        days=days,
+        keyword_count=len(keywords),
+        fetch_hn=fetch_hn,
+        fetch_reddit=fetch_reddit,
+        fetch_youtube=fetch_youtube,
+    )
 
     def _fetch_hn_batch():
         out = []
         if fetch_hn:
             for kw in keywords:
-                out.extend(_fetch_hn(kw, max_results=COMMUNITY_PER_KEYWORD, created_after_ts=cutoff_ts))
+                if len(out) >= max_total_candidates:
+                    break
+                out.extend(_fetch_hn(kw, max_results=hn_per_keyword, created_after_ts=cutoff_ts))
         return out
 
     def _fetch_reddit_batch():
         out = []
         if fetch_reddit:
             for sub in REDDIT_SUBS:
-                out.extend(_fetch_reddit(sub, limit=COMMUNITY_PER_KEYWORD, cutoff_ts=cutoff_ts, errors=errors))
+                if len(out) >= max_total_candidates:
+                    break
+                out.extend(_fetch_reddit(sub, limit=reddit_per_sub, cutoff_ts=cutoff_ts, errors=errors))
         return out
 
     def _fetch_youtube_batch():
         out = []
         if fetch_youtube:
             for kw in keywords:
-                out.extend(_fetch_youtube(kw, max_results=COMMUNITY_PER_KEYWORD, cutoff_dt=cutoff, errors=errors))
+                if len(out) >= max_total_candidates:
+                    break
+                out.extend(_fetch_youtube(kw, max_results=youtube_per_keyword, cutoff_dt=cutoff, errors=errors))
         return out
 
     tasks = []
