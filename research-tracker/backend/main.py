@@ -14,6 +14,7 @@ from cleanup import run_cleanup, run_vacuum
 from community_crawler import fetch_and_store_posts
 from company_crawler import fetch_and_store_company_posts, COMPANY_DIRECTIONS, _strip_html as strip_html
 from code_crawler import fetch_and_store_code_posts
+from tagging import POST_TAG_KEYWORDS
 
 app = FastAPI(title="Research Tracker API", version="1.0.0")
 
@@ -278,7 +279,8 @@ def list_posts(
     params.append("2025-01-01")
     if days and days < 365:
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()[:10]
-        query += " AND (created_at >= ? OR created_at IS NULL OR created_at = '')"
+        # 按时间筛选时不再将无日期数据计入，避免近一月/近三月结果失真
+        query += " AND created_at IS NOT NULL AND created_at != '' AND created_at >= ?"
         params.append(cutoff)
     if sort and sort.strip().lower() == "star":
         query += " ORDER BY score DESC, created_at DESC LIMIT ?"
@@ -322,10 +324,12 @@ def list_posts(
     # 代码/社区动态：仅返回至少有一个研究方向标签的帖子（公司动态不过滤）
     filtered = []
     for p in result:
-        if p["source"] not in POST_SOURCES_REQUIRE_TAG:
+        source_key = (p.get("source") or "").strip().lower()
+        if source_key not in POST_SOURCES_REQUIRE_TAG:
             filtered.append(p)
         else:
-            research_tags = [t for t in (p.get("tags") or []) if t not in SOURCE_ONLY_TAGS]
+            # 仅研究方向标签可视为有效标签；channel/来源标签不计入
+            research_tags = [t for t in (p.get("tags") or []) if t in RESEARCH_POST_TAGS]
             if research_tags:
                 filtered.append(p)
     return filtered
@@ -390,6 +394,7 @@ def _invalidate_tags_cache():
 SOURCE_ONLY_TAGS = frozenset({"HN", "Reddit", "GitHub", "YouTube", "Hugging Face"})
 # 代码/社区动态：仅返回至少有一个研究方向标签的帖子（公司动态不过滤）
 POST_SOURCES_REQUIRE_TAG = frozenset({"github", "huggingface", "hn", "reddit", "youtube"})
+RESEARCH_POST_TAGS = frozenset(POST_TAG_KEYWORDS.keys())
 
 
 @app.get("/api/tags")
