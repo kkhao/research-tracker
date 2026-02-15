@@ -286,7 +286,10 @@ def list_posts(
         query += " ORDER BY score DESC, created_at DESC LIMIT ?"
     else:
         query += " ORDER BY created_at DESC, score DESC LIMIT ?"
-    params.append(limit)
+    # Over-fetch from SQL to compensate for Python tag-filtering (code/community
+    # posts without research tags are dropped). After filtering, truncate to `limit`.
+    sql_limit = limit * 4  # ~25-50% pass rate after tag filter
+    params.append(sql_limit)
     cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
@@ -332,7 +335,7 @@ def list_posts(
             research_tags = [t for t in (p.get("tags") or []) if t in RESEARCH_POST_TAGS]
             if research_tags:
                 filtered.append(p)
-    return filtered
+    return filtered[:limit]  # Truncate to requested limit after filtering
 
 
 @app.post("/api/refresh-posts")

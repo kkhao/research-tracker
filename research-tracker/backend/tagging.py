@@ -5,7 +5,7 @@ from typing import Sequence
 # 3DGS 相关关键词：以下标签需同时匹配 3dgs + 该标签关键词，才打标
 THREEDGS_KEYWORDS = ["3d gaussian", "3dgs", "4d gaussian", "4dgs", "4d gaussian splatting", "dynamic gaussian", "gaussian splatting", "neural gaussian"]
 # 需同时包含 3dgs 的标签
-THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "VR/AR", "3DGS水下建模", "视频/世界模型"})
+THREEDGS_REQUIRED_TAGS = frozenset({"3DGS物理仿真", "3DGS水下建模"})
 # 以下标签抓取时不加 3dgs 前缀；空间智能已移出 THREEDGS_REQUIRED_TAGS，无需 3dgs
 SEARCH_WITHOUT_3DGS_PREFIX = frozenset()
 
@@ -98,10 +98,14 @@ COMPANY_DIRECTION_LABELS: dict[str, str] = {
 
 
 def _match_keywords(text: str, tag_keywords: dict[str, list[str]]) -> list[str]:
-    """Match text against tag keywords, return matched tags."""
+    """Match text against tag keywords, return matched tags.
+    Normalizes hyphens/underscores to spaces so 'awesome-3d-gaussian-splatting'
+    matches keyword '3d gaussian splatting'.
+    """
     if not text:
         return []
-    text_lower = text.lower().strip()
+    # Normalize: hyphens and underscores → spaces for matching
+    text_lower = text.lower().replace("-", " ").replace("_", " ").strip()
     tags = []
     for tag, keywords in tag_keywords.items():
         for kw in keywords:
@@ -115,7 +119,7 @@ def _has_3dgs_keyword(text: str) -> bool:
     """Check if text contains any 3dgs-related keyword."""
     if not text:
         return False
-    tl = text.lower()
+    tl = text.lower().replace("-", " ").replace("_", " ")
     return any(kw.lower() in tl for kw in THREEDGS_KEYWORDS)
 
 
