@@ -4,8 +4,10 @@
  */
 
 export function isValentinesDay(): boolean {
-  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_FORCE_VALENTINE === "true") {
-    return true;
+  if (typeof process !== "undefined") {
+    const force = process.env.NEXT_PUBLIC_FORCE_VALENTINE;
+    if (force === "true") return true;
+    if (force === "false") return false;
   }
   const now = new Date();
   return now.getUTCMonth() === 1 && now.getUTCDate() === 14; // UTC 2月14日，避免服务端/客户端时区不同导致 hydration 不一致
@@ -40,11 +42,15 @@ export type SiteConfig = {
 };
 
 const BIRTHDAY_BLESSINGS: BlessingItem[] = [
-  { text: "愿快乐与幸福常伴你左右", by: "爸爸" },
-  { text: "新的一岁，遇见更好的自己", by: "爸爸" },
-  { text: "妈妈生日快乐！我们永远爱你", by: "宝贝" },
-  { text: "谢谢你为这个家付出的一切", by: "爸爸" },
-  { text: "愿每一天都像今天一样被爱包围", by: "全家" },
+  { text: "愿快乐与幸福常伴你左右", by: "郝小羊" },
+  { text: "妈妈生日快乐，我们永远爱你", by: "郝小宝" },
+  { text: "谢谢你们，有你们就是最好的礼物", by: "郝小妈" },
+  { text: "新的一岁，愿你每天都像今天一样开心", by: "郝小羊" },
+  { text: "妈妈你辛苦了，永远十八岁！", by: "郝小宝" },
+  { text: "一家三口，幸福久久", by: "郝小妈" },
+  { text: "谢谢你为这个家付出的一切", by: "郝小羊" },
+  { text: "我和爸爸永远陪你", by: "郝小宝" },
+  { text: "愿我们永远像今天一样被爱包围", by: "郝小妈" },
 ];
 
 const VALENTINE_BLESSINGS: BlessingItem[] = [
@@ -61,7 +67,8 @@ const VALENTINE_BLESSINGS: BlessingItem[] = [
 
 const BIRTHDAY_CONFIG: SiteConfig = {
   mode: "birthday",
-  title: "大宝，生日快乐 🎉",
+  title: "亲爱的大宝，生日快乐，永远十八岁！",
+  titleClassName: "text-xl md:text-2xl lg:text-3xl whitespace-nowrap title-romantic-text title-romantic",
   subtitle: "我和宝宝永远爱你",
   centerText: "99 朵玫瑰 · 送给最爱的你",
   ariaLabel: "小羊送 99 朵玫瑰给两只小狗",
@@ -75,7 +82,7 @@ const BIRTHDAY_CONFIG: SiteConfig = {
 const VALENTINE_CONFIG: SiteConfig = {
   mode: "valentine",
   title: "亲爱的大宝，情人节快乐，爱你一万年！",
-  titleClassName: "text-3xl md:text-4xl lg:text-5xl whitespace-nowrap title-romantic-text title-romantic",
+  titleClassName: "text-xl md:text-2xl lg:text-3xl whitespace-nowrap title-romantic-text title-romantic",
   subtitle: "我和宝宝永远爱你",
   centerText: "99 朵玫瑰 · 送给最爱的你",
   ariaLabel: "小羊送 99 朵玫瑰给两只小狗",

@@ -14,18 +14,18 @@ function heartPoint(t: number, scale: number) {
 
 const ROSE_COUNT_PER_RING = 32;
 
-/** 内圈、中间一圈、外圈共三圈心形玫瑰 */
+/** 内圈为参考，中圈外圈往里收，整体心形更收缩 */
 const innerRing = Array.from({ length: ROSE_COUNT_PER_RING }, (_, i) => {
   const t = (2 * Math.PI * i) / ROSE_COUNT_PER_RING;
-  return heartPoint(t, 0.55);
+  return heartPoint(t, 0.68);
 });
 const middleRing = Array.from({ length: ROSE_COUNT_PER_RING }, (_, i) => {
   const t = (2 * Math.PI * i) / ROSE_COUNT_PER_RING;
-  return heartPoint(t, 1);
+  return heartPoint(t, 0.84);
 });
 const outerRing = Array.from({ length: ROSE_COUNT_PER_RING }, (_, i) => {
   const t = (2 * Math.PI * i) / ROSE_COUNT_PER_RING;
-  return heartPoint(t, 1.45);
+  return heartPoint(t, 1);
 });
 
 export const ROSE_POSITIONS = [...innerRing, ...middleRing, ...outerRing];

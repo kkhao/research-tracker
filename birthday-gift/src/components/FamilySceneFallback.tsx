@@ -24,13 +24,13 @@ export default function FamilySceneFallback() {
           🌹
         </div>
       ))}
-      <div className="absolute left-[6%] top-1/2 -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10 flex items-center justify-center text-4xl md:text-5xl animate-float rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40">
+      <div className="absolute left-[10%] top-[44%] -translate-y-1/2 w-16 h-16 md:w-24 md:h-24 z-10 flex items-center justify-center text-3xl md:text-4xl animate-float rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40">
         🐑
       </div>
       <div className="absolute left-1/2 top-[82%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10 flex items-center justify-center text-4xl md:text-5xl animate-float rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40">
         🐕
       </div>
-      <div className="absolute right-[6%] top-1/2 -translate-y-1/2 w-24 h-24 md:w-32 md:h-32 z-10 flex items-center justify-center text-5xl md:text-6xl animate-float rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40">
+      <div className="absolute right-[10%] top-[44%] -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10 flex items-center justify-center text-4xl md:text-5xl animate-float rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40">
         🐕
       </div>
       <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">

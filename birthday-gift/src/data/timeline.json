@@ -1,11 +1,14 @@
 [
   {
     "id": "1",
-    "year": 2015,
+    "year": 2017,
     "title": "我们相识",
     "shortDesc": "故事的开始",
     "narrative": "那一年我们相遇，从此生命有了新的色彩。",
-    "media": [{ "type": "image", "url": "", "alt": "相识" }],
+    "media": [
+      { "type": "image", "url": "/timeline/2017-01.jpg", "alt": "相识" },
+      { "type": "image", "url": "/timeline/2017-02.jpg", "alt": "相识" }
+    ],
     "audio": null
   },
   {
@@ -14,25 +17,51 @@
     "title": "我们结婚",
     "shortDesc": "携手一生",
     "narrative": "从两个人变成一家人，许下一生的承诺。",
-    "media": [{ "type": "image", "url": "", "alt": "结婚" }],
+    "media": [
+      { "type": "image", "url": "/timeline/2018-wedding-01.jpg", "alt": "结婚" },
+      { "type": "image", "url": "/timeline/2018-wedding-02.jpg", "alt": "结婚" }
+    ],
     "audio": null
   },
   {
     "id": "3",
-    "year": 2019,
+    "year": 2018,
     "title": "宝贝出生",
     "shortDesc": "三口之家",
     "narrative": "我们的小公主来到了这个世界，家里多了无数的欢笑。",
-    "media": [{ "type": "image", "url": "", "alt": "女儿出生" }],
+    "media": [
+      { "type": "image", "url": "/timeline/2018-baby-01.jpg", "alt": "宝贝出生" },
+      { "type": "image", "url": "/timeline/2018-baby-02.jpg", "alt": "宝贝出生" }
+    ],
     "audio": null
   },
   {
     "id": "4",
+    "year": 2019,
+    "yearEnd": 2025,
+    "title": "宝贝的成长",
+    "shortDesc": "每一天都在长大",
+    "narrative": "从咿呀学语到蹦蹦跳跳，宝贝的每一步都让我们幸福满满。",
+    "media": [
+      { "type": "image", "url": "/timeline/growth-01.jpg", "alt": "成长" },
+      { "type": "image", "url": "/timeline/growth-02.jpg", "alt": "成长" },
+      { "type": "image", "url": "/timeline/growth-03.jpg", "alt": "成长" },
+      { "type": "image", "url": "/timeline/growth-04.jpg", "alt": "成长" }
+    ],
+    "audio": null
+  },
+  {
+    "id": "5",
     "year": 2026,
-    "title": "妈妈32岁生日",
+    "title": "妈妈生日",
     "shortDesc": "爱与感恩",
     "narrative": "感谢你为这个家付出的一切。新的一岁，我们继续一起书写幸福。",
-    "media": [],
+    "media": [
+      { "type": "image", "url": "/timeline/2026-birthday-01.jpg", "alt": "妈妈生日" },
+      { "type": "image", "url": "/timeline/2026-birthday-02.jpg", "alt": "妈妈生日" },
+      { "type": "image", "url": "/timeline/2026-birthday-03.jpg", "alt": "妈妈生日" },
+      { "type": "image", "url": "/timeline/2026-birthday-04.jpg", "alt": "妈妈生日" }
+    ],
     "audio": null
   }
 ]

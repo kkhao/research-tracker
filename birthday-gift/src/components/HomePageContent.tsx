@@ -1,14 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BirthdayCake from "@/components/BirthdayCake";
 import BlessingCarousel from "@/components/BlessingCarousel";
-import MusicControl from "@/components/MusicControl";
 import FamilySceneFallback from "@/components/FamilySceneFallback";
 import { useSiteConfig } from "@/contexts/SiteConfigContext";
+import { useMusic } from "@/contexts/MusicContext";
 
 const ParticleBackground = dynamic(() => import("@/components/ParticleBackground"), { ssr: false });
 const FireworksCanvas = dynamic(() => import("@/components/FireworksCanvas"), { ssr: false });
@@ -24,35 +23,13 @@ const FamilyScene = dynamic(
 
 export default function HomePageContent() {
   const config = useSiteConfig();
-  const pauseBackgroundMusicRef = useRef<(() => void) | null>(null);
-  const playBackgroundMusicRef = useRef<(() => void) | null>(null);
-  const [showMusicOverlay, setShowMusicOverlay] = useState(true);
+  const { pause } = useMusic();
 
   return (
     <ErrorBoundary>
       <ParticleBackground />
       <FireworksCanvas />
       <ShootingStars />
-      <MusicControl
-        onRegisterPause={(pause) => { pauseBackgroundMusicRef.current = pause; }}
-        onRegisterPlay={(play) => { playBackgroundMusicRef.current = play; }}
-        onPlayStateChange={(playing) => { if (playing) setShowMusicOverlay(false); }}
-      />
-      {showMusicOverlay && (
-        <button
-          type="button"
-          onClick={() => {
-            playBackgroundMusicRef.current?.();
-            setShowMusicOverlay(false);
-          }}
-          className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity"
-          aria-label="点击开启背景音乐"
-        >
-          <span className="rounded-2xl bg-white/95 px-8 py-4 text-lg font-medium text-rose-800 shadow-xl border-2 border-rose-200">
-            点击任意处开启背景音乐
-          </span>
-        </button>
-      )}
 
       <div className="relative z-10 max-w-2xl mx-auto text-center bg-transparent">
         <div className="mb-6 md:mb-8 min-h-[280px] md:min-h-[360px]">
@@ -60,7 +37,7 @@ export default function HomePageContent() {
         </div>
 
         {config.showCake && (
-          <BirthdayCake onBlowStart={() => pauseBackgroundMusicRef.current?.()} />
+          <BirthdayCake onBlowStart={pause} />
         )}
         <BlessingCarousel />
 

@@ -61,22 +61,73 @@ body {
   transform-origin: bottom center;
 }
 
+.flame-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px 9999px 70% 70%;
+  background: radial-gradient(circle at 50% 30%, #ffd48b 0%, #f59e0b 65%, #d97706 100%);
+}
+
+.flame-inner {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: 45%;
+  height: 52%;
+  transform: translateX(-50%);
+  border-radius: 9999px 9999px 70% 70%;
+  background: radial-gradient(circle at 50% 35%, #fff8c7 0%, #fde68a 70%, #facc15 100%);
+}
+
+@keyframes candle-sparkle {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(0.7) translateY(0);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.2) translateY(-2px);
+  }
+}
+
+.candle-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #fff7c2 0%, #facc15 70%, rgba(250, 204, 21, 0) 100%);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.7);
+  animation: candle-sparkle 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.candle-spark-a {
+  left: -3px;
+  top: -5px;
+}
+
+.candle-spark-b {
+  right: -4px;
+  top: -8px;
+  animation-delay: 0.35s;
+}
+
 /* 吹灭：先缩小上飘再消失，每根蜡烛用 animation-delay 错开 */
 @keyframes flame-blow-out {
   0% {
-    transform: scale(1) translateY(0);
+    transform: scale(1) scaleX(1) rotate(0deg) translateY(0);
     opacity: 1;
   }
   25% {
-    transform: scale(0.85) translateY(-4px);
+    transform: scale(0.9) scaleX(1.2) rotate(-10deg) translateY(-2px);
     opacity: 0.9;
   }
   70% {
-    transform: scale(0.4) translateY(-8px);
+    transform: scale(0.45) scaleX(0.8) rotate(-18deg) translateY(-8px);
     opacity: 0.4;
   }
   100% {
-    transform: scale(0) translateY(-10px);
+    transform: scale(0) rotate(-20deg) translateY(-12px);
     opacity: 0;
   }
 }
@@ -115,31 +166,32 @@ body {
 /* 吹灭后的轻烟 */
 @keyframes smoke-wisp {
   0% {
-    transform: scale(0.5) translateY(0);
+    transform: scale(0.5) translate(0, 0);
     opacity: 0;
   }
   20% {
-    opacity: 0.25;
+    opacity: 0.32;
   }
   100% {
-    transform: scale(1.2) translateY(-12px);
+    transform: scale(1.5) translate(4px, -18px);
     opacity: 0;
   }
 }
 
 .flame-smoke {
   animation: smoke-wisp 0.8s ease-out forwards;
+  filter: blur(1px);
   pointer-events: none;
 }
 
 /* 蛋糕奶油层高光 */
 @keyframes cake-shine {
   0%, 100% {
-    opacity: 0.4;
+    opacity: 0.55;
     background-position: 0% 50%;
   }
   50% {
-    opacity: 0.7;
+    opacity: 0.9;
     background-position: 100% 50%;
   }
 }
@@ -169,6 +221,391 @@ body {
 
 .cake-shadow {
   animation: cake-shadow-pulse 3s ease-in-out infinite;
+}
+
+/* 烛光对蛋糕的暖反射 */
+@keyframes cake-warm-flicker {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+.cake-warm-glow {
+  background: radial-gradient(
+    circle at 50% 14%,
+    rgba(251, 191, 36, 0.36) 0%,
+    rgba(248, 180, 196, 0.28) 34%,
+    rgba(248, 180, 196, 0.12) 70%,
+    transparent 100%
+  );
+  animation: cake-warm-flicker 0.22s ease-in-out infinite;
+}
+
+/* 三层蛋糕装饰 */
+.cake-piping-top {
+  background: repeating-radial-gradient(
+    circle at 6px -2px,
+    rgba(255, 255, 255, 0.95) 0 4px,
+    rgba(244, 114, 182, 0.35) 4px 7px
+  );
+}
+
+.cake-piping-mid {
+  background: repeating-radial-gradient(
+    circle at 7px -2px,
+    rgba(255, 255, 255, 0.95) 0 5px,
+    rgba(251, 191, 36, 0.32) 5px 8px
+  );
+}
+
+.cake-gold-trim {
+  background: linear-gradient(
+    90deg,
+    rgba(250, 204, 21, 0.15) 0%,
+    rgba(251, 191, 36, 0.55) 18%,
+    rgba(254, 240, 138, 0.8) 50%,
+    rgba(251, 191, 36, 0.55) 82%,
+    rgba(250, 204, 21, 0.15) 100%
+  );
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.5), inset 0 0 6px rgba(254, 240, 138, 0.35);
+}
+
+.cake-pearl {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 30% 30%, #fff, #f8dce5 65%, #e9a9bc 100%);
+  box-shadow: 0 0 5px rgba(248, 180, 196, 0.55);
+  animation: cake-pearl-twinkle 2.8s ease-in-out infinite;
+}
+
+.cake-pearl-rich {
+  width: 7px;
+  height: 7px;
+  box-shadow: 0 0 7px rgba(251, 191, 36, 0.45), 0 0 4px rgba(248, 180, 196, 0.45);
+}
+
+@keyframes cake-pearl-twinkle {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+.cake-pearl-chain {
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0 2px, transparent 3px);
+  background-size: 10px 10px;
+  background-position: 0 3px;
+  opacity: 0.9;
+}
+
+.cake-gold-dust {
+  background-image:
+    radial-gradient(circle at 15% 30%, rgba(251, 191, 36, 0.28) 0 1px, transparent 2px),
+    radial-gradient(circle at 35% 60%, rgba(251, 191, 36, 0.22) 0 1px, transparent 2px),
+    radial-gradient(circle at 62% 42%, rgba(255, 255, 255, 0.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 80% 64%, rgba(251, 191, 36, 0.24) 0 1px, transparent 2px);
+  animation: cake-dust-float 4.2s ease-in-out infinite;
+}
+
+.cake-star {
+  font-size: 0.65rem;
+  color: #facc15;
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.75), 0 0 12px rgba(244, 114, 182, 0.35);
+  animation: cake-star-spark 1.8s ease-in-out infinite;
+}
+
+@keyframes cake-star-spark {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+.cake-luxury-aura {
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 50% 48%,
+    rgba(251, 191, 36, 0.22) 0%,
+    rgba(244, 114, 182, 0.16) 34%,
+    rgba(244, 114, 182, 0.05) 62%,
+    transparent 100%
+  );
+  filter: blur(3px);
+  animation: cake-luxury-pulse 2.4s ease-in-out infinite;
+}
+
+.cake-crown {
+  font-size: 1.35rem;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7));
+  animation: cake-crown-float 2.2s ease-in-out infinite;
+}
+
+@keyframes cake-crown-float {
+  0%, 100% { transform: translate(-50%, 0) scale(1); }
+  50% { transform: translate(-50%, -3px) scale(1.05); }
+}
+
+@keyframes cake-crown-finale-pulse {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7));
+  }
+  35% {
+    filter: drop-shadow(0 0 18px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 28px rgba(244, 114, 182, 0.55));
+  }
+  100% {
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.72));
+  }
+}
+
+.cake-crown-finale {
+  animation:
+    cake-crown-float 2.2s ease-in-out infinite,
+    cake-crown-finale-pulse 0.95s ease-out 1;
+}
+
+@keyframes cake-crown-afterblow-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.88)) drop-shadow(0 0 22px rgba(244, 114, 182, 0.35));
+  }
+}
+
+.cake-crown-afterblow {
+  animation:
+    cake-crown-float 2.2s ease-in-out infinite,
+    cake-crown-afterblow-glow 3.2s ease-in-out infinite;
+}
+
+.cake-birthday-plaque {
+  position: absolute;
+  min-width: 92px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #be185d;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.88), rgba(253,242,248,0.95), rgba(255,255,255,0.88));
+  border: 1px solid rgba(244, 114, 182, 0.4);
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.35), inset 0 0 10px rgba(255,255,255,0.45);
+  overflow: hidden;
+}
+
+@keyframes cake-plaque-finale-pulse {
+  0% {
+    transform: translate(-50%, 0) scale(1);
+    box-shadow: 0 0 8px rgba(244, 114, 182, 0.35), inset 0 0 10px rgba(255,255,255,0.45);
+  }
+  45% {
+    transform: translate(-50%, -1px) scale(1.06);
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.55), 0 0 20px rgba(244, 114, 182, 0.55), inset 0 0 12px rgba(255,255,255,0.72);
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1);
+    box-shadow: 0 0 8px rgba(244, 114, 182, 0.35), inset 0 0 10px rgba(255,255,255,0.45);
+  }
+}
+
+.cake-birthday-plaque-finale {
+  animation: cake-plaque-finale-pulse 0.95s ease-out 1;
+}
+
+@keyframes cake-plaque-afterblow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(244, 114, 182, 0.35), inset 0 0 10px rgba(255,255,255,0.45);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.45), 0 0 16px rgba(244, 114, 182, 0.45), inset 0 0 12px rgba(255,255,255,0.62);
+  }
+}
+
+.cake-birthday-plaque-afterblow {
+  animation: cake-plaque-afterblow-pulse 3s ease-in-out infinite;
+}
+
+.cake-plaque-shine {
+  position: absolute;
+  top: -30%;
+  left: -35%;
+  width: 34%;
+  height: 170%;
+  transform: rotate(20deg);
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.7), transparent);
+  animation: plaque-shine 2.8s ease-in-out infinite;
+}
+
+@keyframes plaque-shine {
+  0%, 40% { left: -35%; opacity: 0; }
+  45% { opacity: 0.9; }
+  70% { left: 105%; opacity: 0.2; }
+  100% { left: 105%; opacity: 0; }
+}
+
+@keyframes plaque-shine-finale {
+  0% { left: -38%; opacity: 0; }
+  20% { opacity: 1; }
+  78% { left: 110%; opacity: 0.35; }
+  100% { left: 110%; opacity: 0; }
+}
+
+.cake-plaque-shine-finale {
+  animation: plaque-shine-finale 0.95s ease-out 1;
+}
+
+@keyframes plaque-shine-afterblow {
+  0%, 55% { left: -35%; opacity: 0; }
+  65% { opacity: 0.75; }
+  88% { left: 105%; opacity: 0.25; }
+  100% { left: 105%; opacity: 0; }
+}
+
+.cake-plaque-shine-afterblow {
+  animation: plaque-shine-afterblow 3.6s ease-in-out infinite;
+}
+
+@keyframes cake-luxury-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.98); }
+  50% { opacity: 0.9; transform: scale(1.04); }
+}
+
+@keyframes cake-dust-float {
+  0%, 100% { opacity: 0.45; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(-1px); }
+}
+
+@keyframes wish-chest-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.55);
+    filter: blur(1px);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(-50%, -2px) scale(1.08);
+    filter: blur(0);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1);
+  }
+}
+
+@keyframes wish-chest-idle {
+  0%, 100% { transform: translate(-50%, -6px) scale(1); }
+  50% { transform: translate(-50%, -9px) scale(1.03); }
+}
+
+@keyframes wish-chest-glitter {
+  0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(0.85); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+.wish-chest {
+  left: 50%;
+  animation: wish-chest-pop 0.85s ease-out both, wish-chest-idle 2.2s ease-in-out 0.85s infinite;
+}
+
+.wish-chest-icon {
+  display: inline-block;
+  font-size: 1.8rem;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.65));
+}
+
+.wish-chest-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  color: #f59e0b;
+  text-shadow: 0 0 14px rgba(251, 191, 36, 0.8), 0 0 24px rgba(248, 180, 196, 0.5);
+  animation: wish-chest-glitter 0.45s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes wish-star-ring-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) rotate(-12deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.02) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes wish-star-ring-idle {
+  0%, 100% { opacity: 0.92; transform: scale(1) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.02) rotate(2deg); }
+}
+
+@keyframes wish-star-twinkle {
+  0%, 100% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(0.8);
+    filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.4));
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+    filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.7));
+  }
+}
+
+.wish-star-ring {
+  animation: wish-star-ring-enter 1s ease-out forwards, wish-star-ring-idle 2.8s ease-in-out 1s infinite;
+}
+
+.wish-star {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 0.95rem;
+  color: #facc15;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.7), 0 0 18px rgba(244, 114, 182, 0.45);
+  animation: wish-star-twinkle 0.7s ease-in-out infinite;
+}
+
+@keyframes money-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) rotate(0deg) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--money-drift, 0px)), -120px) rotate(18deg) scale(1.15);
+  }
+}
+
+.money-particle {
+  position: absolute;
+  bottom: 26px;
+  font-size: 1.35rem;
+  animation-name: money-rise;
+  animation-timing-function: cubic-bezier(0.2, 0.6, 0.2, 1);
+  animation-fill-mode: both;
+  animation-iteration-count: infinite;
+}
+
+.money-coin {
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.65));
+}
+
+.money-bill {
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
 }
 
 /* 流星雨 */

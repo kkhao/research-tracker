@@ -32,7 +32,7 @@ export default function FamilyScene() {
         videoSrc="/sheep.mp4"
         src="/sheep.json"
         fallback="🐑"
-        className="absolute left-[6%] top-1/2 -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10"
+        className="absolute left-[10%] top-[44%] -translate-y-1/2 w-16 h-16 md:w-24 md:h-24 z-10"
       />
 
       {/* 小狗（妻子）— 心尖位置 */}
@@ -50,7 +50,7 @@ export default function FamilyScene() {
         videoSrc="/dog2.mp4"
         src="/dog2.json"
         fallback="🐕"
-        className="absolute right-[6%] top-1/2 -translate-y-1/2 w-24 h-24 md:w-32 md:h-32 z-10"
+        className="absolute right-[10%] top-[44%] -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10"
       />
 
       {/* 心形上方：主标题 */}

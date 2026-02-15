@@ -6,6 +6,7 @@ import type { TimelineEvent } from "@/data/types";
 
 export default function Timeline() {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   return (
     <div className="relative">
@@ -15,8 +16,8 @@ export default function Timeline() {
       <ul className="space-y-0">
         {(events as TimelineEvent[]).map((event) => (
           <li key={event.id} className="relative flex gap-6 pl-2">
-            <div className="relative z-10 flex shrink-0 items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-rose-300 text-rose-700 font-semibold shadow">
-              {event.year}
+            <div className={`relative z-10 flex shrink-0 items-center justify-center rounded-full bg-white border-2 border-rose-300 text-rose-700 font-semibold shadow ${event.yearEnd ? "w-14 h-10 min-w-[3.5rem] text-xs px-1" : "w-10 h-10"}`}>
+              {event.yearEnd ? `${event.year}-${event.yearEnd}` : event.year}
             </div>
             <div className="flex-1 pb-10">
               <button
@@ -42,21 +43,37 @@ export default function Timeline() {
                       {event.narrative}
                     </p>
                   )}
-                  {event.media && event.media.length > 0 && event.media[0].url && (
-                    <div className="mt-4">
-                      {event.media[0].type === "image" ? (
-                        <img
-                          src={event.media[0].url}
-                          alt={event.media[0].alt || ""}
-                          className="rounded-lg max-h-64 object-cover w-full"
-                        />
-                      ) : (
-                        <video
-                          src={event.media[0].url}
-                          controls
-                          className="rounded-lg w-full max-h-64"
-                        />
-                      )}
+                  {event.media && event.media.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      {event.media.map((item, idx) => {
+                        if (!item.url) return null;
+                        if (item.type === "video") {
+                          return (
+                            <div key={idx} className="rounded-lg overflow-hidden bg-rose-100/50 aspect-video">
+                              <video
+                                src={item.url}
+                                controls
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                              />
+                            </div>
+                          );
+                        }
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setLightboxUrl(item.url)}
+                            className="rounded-lg overflow-hidden aspect-video bg-rose-100/50 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                          >
+                            <img
+                              src={item.url}
+                              alt={item.alt || ""}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                   {event.audio?.url && (
@@ -73,6 +90,23 @@ export default function Timeline() {
           </li>
         ))}
       </ul>
+
+      {/* 图片点击放大 */}
+      {lightboxUrl && (
+        <button
+          type="button"
+          onClick={() => setLightboxUrl(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          aria-label="关闭"
+        >
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </button>
+      )}
     </div>
   );
 }

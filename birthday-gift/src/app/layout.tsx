@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getSiteConfig } from "@/data/siteConfig";
+import { LayoutWithMusic } from "@/contexts/MusicContext";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { pageTitle, pageDescription } = getSiteConfig();
@@ -15,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="antialiased bg-gradient-to-b from-rose-100/80 to-pink-100/80 min-h-screen">
-        {children}
+        <LayoutWithMusic>{children}</LayoutWithMusic>
       </body>
     </html>
   );
