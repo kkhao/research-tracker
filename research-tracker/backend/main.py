@@ -376,9 +376,13 @@ def _invalidate_tags_cache():
     _TAGS_CACHE = None
 
 
+# 来源不参与标签筛选，仅用 source 字段；从 /api/tags 下拉中排除
+SOURCE_ONLY_TAGS = frozenset({"HN", "Reddit", "GitHub", "YouTube", "Hugging Face"})
+
+
 @app.get("/api/tags")
 def list_tags():
-    """Get all unique tags from papers and posts for filter dropdown. Cached 5 min."""
+    """Get all unique tags from papers and posts for filter dropdown. Cached 5 min. 排除来源标签（HN/GitHub 等）。"""
     global _TAGS_CACHE, _TAGS_CACHE_AT
     now = time()
     if _TAGS_CACHE is not None and (now - _TAGS_CACHE_AT) < _TAGS_CACHE_TTL:
@@ -389,12 +393,12 @@ def list_tags():
     cursor.execute("SELECT tags FROM papers WHERE tags IS NOT NULL AND tags != ''")
     for row in cursor.fetchall():
         for t in (row["tags"] or "").split(","):
-            if t.strip():
+            if t.strip() and t.strip() not in SOURCE_ONLY_TAGS:
                 tags.add(t.strip())
     cursor.execute("SELECT tags FROM posts WHERE tags IS NOT NULL AND tags != ''")
     for row in cursor.fetchall():
         for t in (row["tags"] or "").split(","):
-            if t.strip():
+            if t.strip() and t.strip() not in SOURCE_ONLY_TAGS:
                 tags.add(t.strip())
     conn.close()
     result = sorted(tags)

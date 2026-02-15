@@ -53,6 +53,9 @@ const TAG_CLASSES: Record<string, string> = {
   "机器人": "tag-default",
 };
 
+// 来源由 source 展示，不再在标签中显示
+const SOURCE_TAGS = new Set(["HN", "Reddit", "GitHub", "YouTube", "Hugging Face"]);
+
 function getTagClass(tag: string): string {
   return TAG_CLASSES[tag] ?? "tag-default";
 }
@@ -121,9 +124,12 @@ export default function PostCard({ post }: { post: Post }) {
             </>
           )}
         </div>
-        {post.tags && post.tags.length > 0 && (
+        {post.tags && post.tags.length > 0 && (() => {
+          const displayTags = post.tags.filter((t) => !SOURCE_TAGS.has(t));
+          if (displayTags.length === 0) return null;
+          return (
           <div className="flex flex-wrap gap-2">
-            {post.tags.slice(0, 6).map((t) => (
+            {displayTags.slice(0, 6).map((t) => (
               <span
                 key={t}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getTagClass(t)}`}
@@ -132,7 +138,8 @@ export default function PostCard({ post }: { post: Post }) {
               </span>
             ))}
           </div>
-        )}
+          );
+        })()}
         <a
           href={post.url}
           target="_blank"
