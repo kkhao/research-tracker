@@ -124,7 +124,7 @@ export default function Wishboard() {
             <select
               value={selectedIcon}
               onChange={(e) => setSelectedIcon(e.target.value)}
-              className="w-24 rounded-xl border border-rose-200 px-2 py-2 text-center text-xl bg-white outline-none focus:border-rose-400"
+              className="w-24 rounded-xl border border-rose-200 px-2 py-2 text-base text-center text-xl bg-white outline-none focus:border-rose-400"
               aria-label="默认愿望图标"
             >
               {ICON_OPTIONS.map((item) => (
@@ -137,7 +137,7 @@ export default function Wishboard() {
               value={customIcon}
               onChange={(e) => setCustomIcon(e.target.value)}
               maxLength={4}
-              className="w-28 rounded-xl border border-rose-200 px-3 py-2 text-center text-xl bg-white outline-none focus:border-rose-400"
+              className="w-28 rounded-xl border border-rose-200 px-3 py-2 text-base text-center text-xl bg-white outline-none focus:border-rose-400"
               placeholder="自定义"
               aria-label="自定义愿望图标"
             />
@@ -150,7 +150,7 @@ export default function Wishboard() {
             onChange={(e) => setTitle(e.target.value)}
             maxLength={40}
             required
-            className="w-full rounded-xl border border-rose-200 px-3 py-2 bg-white outline-none focus:border-rose-400"
+            className="w-full rounded-xl border border-rose-200 px-3 py-2 text-base bg-white outline-none focus:border-rose-400"
             placeholder="写下你的小愿望"
             aria-label="愿望标题"
           />
@@ -159,7 +159,7 @@ export default function Wishboard() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           maxLength={80}
-          className="w-full rounded-xl border border-rose-200 px-3 py-2 bg-white outline-none focus:border-rose-400"
+          className="w-full rounded-xl border border-rose-200 px-3 py-2 text-base bg-white outline-none focus:border-rose-400"
           placeholder="补充一句描述（可选）"
           aria-label="愿望描述"
         />
@@ -167,7 +167,7 @@ export default function Wishboard() {
           <select
             value={by}
             onChange={(e) => setBy(e.target.value as (typeof BY_OPTIONS)[number])}
-            className="rounded-xl border border-rose-200 px-3 py-2 bg-white outline-none focus:border-rose-400"
+            className="rounded-xl border border-rose-200 px-3 py-2 text-base bg-white outline-none focus:border-rose-400"
             aria-label="署名"
           >
             {BY_OPTIONS.map((name) => (

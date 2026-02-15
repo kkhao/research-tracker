@@ -7,7 +7,7 @@ export default function FamilySceneFallback() {
   const config = useSiteConfig();
   return (
     <section
-      className="relative mx-auto w-full max-w-2xl aspect-[4/3] min-h-[280px] md:min-h-[360px]"
+      className="relative mx-auto w-full max-w-2xl aspect-[4/3] min-h-[220px] md:min-h-[280px] -translate-y-2 md:-translate-y-3"
       aria-label={config.ariaLabel}
     >
       {ROSE_POSITIONS.map((pos, i) => (
@@ -33,7 +33,7 @@ export default function FamilySceneFallback() {
       <div className="absolute right-[10%] top-[44%] -translate-y-1/2 w-20 h-20 md:w-28 md:h-28 z-10 flex items-center justify-center text-4xl md:text-5xl animate-float rounded-full overflow-hidden bg-gradient-to-br from-rose-100/70 to-pink-100/60 shadow-lg shadow-rose-200/40">
         🐕
       </div>
-      <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">
+      <div className="absolute left-1/2 top-[8%] -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">
         <h2 className={`font-bold ${config.titleClassName ?? "text-xl md:text-2xl text-rose-800 whitespace-nowrap animate-float"}`}>
           {config.title}
         </h2>

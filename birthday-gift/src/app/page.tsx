@@ -5,7 +5,7 @@ import { getSiteConfig } from "@/data/siteConfig";
 export default function HomePage() {
   const config = getSiteConfig();
   return (
-    <main className="relative min-h-screen py-12 px-4">
+    <main className="relative min-h-screen pt-2 pb-12 px-4">
       <SiteConfigProvider initialConfig={config}>
         <HomePageContent />
       </SiteConfigProvider>

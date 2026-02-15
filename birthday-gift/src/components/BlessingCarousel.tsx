@@ -15,8 +15,8 @@ export default function BlessingCarousel() {
   }, [blessings.length]);
 
   return (
-    <div className="mt-8 max-w-xl mx-auto px-4">
-      <div className="bg-white/80 rounded-2xl shadow-lg py-4 px-6 border border-rose-200/60 min-h-[80px] flex items-center justify-center">
+    <div className="mt-2 max-w-md mx-auto px-4">
+      <div className="bg-white/80 rounded-2xl shadow-lg py-4 px-5 border border-rose-200/60 min-h-[80px] flex items-center justify-center">
         <p className="text-rose-900 text-lg text-center">
           「 {blessings[index].text} 」
           {blessings[index].by && (

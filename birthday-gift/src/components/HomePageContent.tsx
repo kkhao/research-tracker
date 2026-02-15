@@ -32,7 +32,7 @@ export default function HomePageContent() {
       <ShootingStars />
 
       <div className="relative z-10 max-w-2xl mx-auto text-center bg-transparent">
-        <div className="mb-6 md:mb-8 min-h-[280px] md:min-h-[360px]">
+        <div className="mb-0 md:mb-1 min-h-[248px] md:min-h-[320px]">
           <FamilyScene />
         </div>
 
@@ -42,7 +42,7 @@ export default function HomePageContent() {
         <BlessingCarousel />
 
         {config.showNav && (
-          <nav className="mt-12 flex flex-wrap justify-center gap-4">
+          <nav className="mt-5 flex flex-wrap justify-center gap-4">
             <Link
               href="/timeline"
               className="px-6 py-3 rounded-2xl bg-white/90 border-2 border-rose-200 text-rose-700 font-medium hover:bg-rose-50 hover:border-rose-300 transition-colors shadow"

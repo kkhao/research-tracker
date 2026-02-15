@@ -8,7 +8,7 @@ export default function FamilyScene() {
   const config = useSiteConfig();
   return (
     <section
-      className="relative mx-auto w-full max-w-2xl aspect-[4/3] min-h-[280px] md:min-h-[360px]"
+      className="relative mx-auto w-full max-w-2xl aspect-[4/3] min-h-[220px] md:min-h-[280px] -translate-y-2 md:-translate-y-3"
       aria-label={config.ariaLabel}
     >
       {/* 玫瑰环绕 */}
@@ -54,7 +54,7 @@ export default function FamilyScene() {
       />
 
       {/* 心形上方：主标题 */}
-      <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">
+      <div className="absolute left-1/2 top-[8%] -translate-x-1/2 -translate-y-0 z-[5] pointer-events-none text-center">
         <h2 className={`font-bold ${config.titleClassName ?? "text-xl md:text-2xl text-rose-800 whitespace-nowrap animate-float"}`}>
           {config.title}
         </h2>

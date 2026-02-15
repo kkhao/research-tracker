@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { getSiteConfig } from "@/data/siteConfig";
 import { LayoutWithMusic } from "@/contexts/MusicContext";
@@ -7,6 +7,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const { pageTitle, pageDescription } = getSiteConfig();
   return { title: pageTitle, description: pageDescription };
 }
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default function RootLayout({
   children,
