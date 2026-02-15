@@ -790,8 +790,6 @@ export default function Home() {
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
                   <option value="空间智能">空间智能</option>
-                  <option value="GitHub">GitHub</option>
-                  <option value="Hugging Face">Hugging Face</option>
                 </select>
                 <select
                   value={codeFilters.source}
@@ -868,9 +866,6 @@ export default function Home() {
                   <option value="3DGS编辑">3DGS编辑</option>
                   <option value="3DGS水下建模">3DGS水下建模</option>
                   <option value="空间智能">空间智能</option>
-                  <option value="HN">HN</option>
-                  <option value="Reddit">Reddit</option>
-                  <option value="YouTube">YouTube</option>
                 </select>
                 <select
                   value={postFilters.source}
