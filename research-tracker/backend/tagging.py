@@ -157,24 +157,13 @@ def tag_post(
     source: str,
     channel: str | None,
 ) -> list[str]:
-    """Compute tags for a community post."""
+    """Compute tags for a community/code post. 仅研究方向+channel，来源由 source 字段表示不写入 tags."""
     tags = []
     combined = f"{title or ''} {summary or ''}"
     tags.extend(_match_keywords(combined, POST_TAG_KEYWORDS))
     if not _has_3dgs_keyword(combined):
         tags = [t for t in tags if t not in THREEDGS_REQUIRED_TAGS]
-    if source:
-        sl = source.lower()
-        if sl == "hn":
-            tags.append("HN")
-        elif sl == "reddit":
-            tags.append("Reddit")
-        elif sl == "github":
-            tags.append("GitHub")
-        elif sl == "youtube":
-            tags.append("YouTube")
-        elif sl == "huggingface":
-            tags.append("Hugging Face")
+    # 来源（HN/Reddit/YouTube/GitHub/Hugging Face）不再写入 tags，仅用 source 字段表示
     if channel:
         tags.append(channel)
     return list(dict.fromkeys(tags))
