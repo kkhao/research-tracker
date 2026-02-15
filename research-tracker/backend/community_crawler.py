@@ -202,13 +202,18 @@ def _normalize_url(url: str) -> str:
 
 
 def _days_scale(days: int | None) -> float:
+    """Time-range scaling factor: longer range → more results per keyword."""
     if not days or days >= 365:
-        return 2.1
-    if days <= 30:
+        return 3.0
+    if days <= 7:
         return 1.0
+    if days <= 14:
+        return 1.5
+    if days <= 30:
+        return 2.0
     if days <= 90:
-        return 1.8
-    return 2.1
+        return 2.5
+    return 3.0
 
 
 def _compute_community_budgets(
@@ -219,28 +224,22 @@ def _compute_community_budgets(
     fetch_youtube: bool,
 ) -> tuple[int, int, int, int]:
     """
-    Dynamic fetch budget based on final display target.
+    Dynamic fetch budget: per-keyword limits **directly scale** with time range.
+    Longer range → more results per keyword to capture older items.
     Returns: (hn_per_keyword, reddit_per_sub, youtube_per_keyword, max_total_candidates)
     """
+    scale = _days_scale(days)
+    # Per-keyword limits directly proportional to time scale
+    hn_per_keyword = min(200, max(COMMUNITY_PER_KEYWORD, int(COMMUNITY_PER_KEYWORD * scale))) if fetch_hn else 0
+    youtube_per_keyword = min(50, max(COMMUNITY_PER_KEYWORD, int(COMMUNITY_PER_KEYWORD * scale))) if fetch_youtube else 0
+    # Reddit: fewer subs → higher per-sub budget; base 50
+    reddit_per_sub = min(100, max(COMMUNITY_PER_KEYWORD, int(50 * scale))) if fetch_reddit else 0
+
+    # Max total: proportional to actual fetch volume, generous to not discard any source
     kw_count = max(1, keyword_count)
-    desired_raw = int(TARGET_DISPLAY_POSTS * FETCH_SAFETY_FACTOR * _days_scale(days))
-    desired_raw = max(TARGET_DISPLAY_POSTS, desired_raw)
-
-    active_sources = int(fetch_hn) + int(fetch_reddit) + int(fetch_youtube)
-    active_sources = max(1, active_sources)
-    per_source_budget = max(kw_count, desired_raw // active_sources)
-
-    hn_per_keyword = max(COMMUNITY_PER_KEYWORD, per_source_budget // kw_count) if fetch_hn else 0
-    youtube_per_keyword = max(COMMUNITY_PER_KEYWORD, per_source_budget // kw_count) if fetch_youtube else 0
-    reddit_per_sub = max(COMMUNITY_PER_KEYWORD, per_source_budget // max(1, len(REDDIT_SUBS))) if fetch_reddit else 0
-
-    # API 上限保护
-    hn_per_keyword = min(50, hn_per_keyword)
-    youtube_per_keyword = min(50, youtube_per_keyword)
-    reddit_per_sub = min(100, reddit_per_sub)
-
-    max_total_candidates = max(desired_raw, TARGET_DISPLAY_POSTS * 2)
-    max_total_candidates = min(max_total_candidates, 6000)
+    sub_count = len(REDDIT_SUBS) if fetch_reddit else 0
+    raw_estimate = (hn_per_keyword + youtube_per_keyword) * kw_count + reddit_per_sub * sub_count
+    max_total_candidates = min(6000, max(raw_estimate, TARGET_DISPLAY_POSTS * 3))
     return hn_per_keyword, reddit_per_sub, youtube_per_keyword, max_total_candidates
 
 
@@ -261,7 +260,10 @@ def fetch_and_store_posts(
     seen_urls = set()
     errors: list[str] = []
 
-    cutoff = datetime.now() - timedelta(days=days)
+    # Widen crawl window: fetch broader than display range so DB has data for various time views
+    # e.g. user selects 7d → crawl 90d → switching to 30d view works without re-refresh
+    crawl_days = max(days * 3, 90)
+    cutoff = datetime.now() - timedelta(days=crawl_days)
     cutoff_ts = int(cutoff.timestamp())
 
     def _add_post(p):
@@ -295,7 +297,7 @@ def fetch_and_store_posts(
     fetch_reddit = (not src or src == "reddit") and (not tag or not tag.strip() or tag.strip() not in PAPER_TAG_KEYWORDS)
     fetch_youtube = not src or src == "youtube"
     hn_per_keyword, reddit_per_sub, youtube_per_keyword, max_total_candidates = _compute_community_budgets(
-        days=days,
+        days=crawl_days,
         keyword_count=len(keywords),
         fetch_hn=fetch_hn,
         fetch_reddit=fetch_reddit,

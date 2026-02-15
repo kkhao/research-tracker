@@ -240,7 +240,7 @@ def list_posts(
     direction: str | None = Query(None, description="Filter by direction (3d_gen/video_world/3d_design/llm/embodied)"),
     tag: str | None = Query(None, description="Filter by tag (3DGS, 大模型, etc.)"),
     days: int = Query(365, ge=1, le=365, description="Filter by days (default 365=all)"),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
     sort: str | None = Query(None, description="Sort by: created (default) or star (score, GitHub stars / HF downloads)"),
 ):
     """List community and company posts."""

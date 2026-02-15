@@ -300,7 +300,9 @@ export default function Home() {
       if (codeFilters.tag) params.set("tag", codeFilters.tag);
       params.set("days", String(codeFilters.days));
       if (codeFilters.sort === "star") params.set("sort", "star");
-      params.set("limit", "200");
+      // Longer time range → higher limit so user sees the data volume difference
+      const codeLimit = codeFilters.days <= 30 ? 200 : codeFilters.days <= 90 ? 500 : 1000;
+      params.set("limit", String(codeLimit));
       const res = await fetchApi(`/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -328,7 +330,9 @@ export default function Home() {
       if (debouncedPostSearch) params.set("search", debouncedPostSearch);
       if (postFilters.tag) params.set("tag", postFilters.tag);
       params.set("days", String(postFilters.days));
-      params.set("limit", "200");
+      // Longer time range → higher limit so user sees the data volume difference
+      const postLimit = postFilters.days <= 7 ? 200 : postFilters.days <= 14 ? 300 : 500;
+      params.set("limit", String(postLimit));
       const res = await fetchApi(`/api/posts?${params}`);
       if (res.ok) {
         const data = await res.json();
