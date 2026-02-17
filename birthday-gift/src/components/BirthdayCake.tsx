@@ -18,7 +18,7 @@ function getCountdown(target: Date) {
 
 const MONEY_PARTICLES = Array.from({ length: 8 }, (_, i) => ({
   id: i,
-  icon: "🪙",
+  icon: "💰",
   left: 8 + ((i * 7) % 84),
   delay: (i % 6) * 0.12,
   duration: 2.2 + (i % 5) * 0.25,
@@ -50,6 +50,16 @@ export default function BirthdayCake({ onBlowStart }: Props) {
   const birthdayAudioRef = useRef<HTMLAudioElement | null>(null);
   const finalePulseTimerRef = useRef<number | null>(null);
   const finalePulseResetTimerRef = useRef<number | null>(null);
+  const audioUnlockedRef = useRef(false);
+
+  /** iOS 16 等需在用户手势下先「解锁」音频，再在吹蜡烛时 play 才能稳定播放 */
+  const handleUnlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current) return;
+    audioUnlockedRef.current = true;
+    const a = new Audio();
+    a.volume = 0;
+    a.play().then(() => a.pause()).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const tick = () => setCountdown(getCountdown(CANDLE_TARGET_DATE));
@@ -166,6 +176,7 @@ export default function BirthdayCake({ onBlowStart }: Props) {
     if (finalePulseResetTimerRef.current !== null) {
       window.clearTimeout(finalePulseResetTimerRef.current);
     }
+    handleUnlockAudio();
     triggerConfetti();
     window.setTimeout(() => setWishGranted(true), 850);
     finalePulseTimerRef.current = window.setTimeout(() => {
@@ -177,13 +188,14 @@ export default function BirthdayCake({ onBlowStart }: Props) {
     birthdayAudioRef.current = audio;
     audio.volume = 0.6;
     audio.loop = true;
+    audio.load();
     audio.play().catch((e) => {
       setBirthdaySongPlaying(false);
       setAudioError("无法播放生日歌，请确认 public/birthday-song.mp3 存在且可访问");
       console.warn("Birthday audio failed:", e);
     });
     audio.onended = () => setBirthdaySongPlaying(false);
-  }, [blownOut, triggerConfetti, onBlowStart]);
+  }, [blownOut, triggerConfetti, onBlowStart, handleUnlockAudio]);
 
   const toggleBirthdaySong = useCallback(() => {
     const audio = birthdayAudioRef.current;
@@ -214,7 +226,12 @@ export default function BirthdayCake({ onBlowStart }: Props) {
   }, []);
 
   return (
-    <div className="flex flex-col items-center">
+    <div
+      className="flex flex-col items-center"
+      onTouchStart={handleUnlockAudio}
+      onClick={handleUnlockAudio}
+      role="presentation"
+    >
       {/* 贺卡式容器 */}
       <div className="relative bg-white/95 rounded-3xl shadow-2xl px-10 py-8 max-w-md border-2 border-rose-200/60 cake-shadow">
         <p className="text-center text-rose-800 text-lg font-medium mb-14">
@@ -256,7 +273,7 @@ export default function BirthdayCake({ onBlowStart }: Props) {
                   {MONEY_PARTICLES.map((p) => (
                     <span
                       key={p.id}
-                      className={`money-particle ${p.icon === "🪙" ? "money-coin" : "money-bill"}`}
+                      className="money-particle money-coin"
                       style={{
                         left: `${p.left}%`,
                         animationDelay: `${p.delay}s`,

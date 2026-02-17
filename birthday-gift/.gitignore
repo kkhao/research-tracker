@@ -24,6 +24,9 @@ yarn-error.log*
 *.swp
 *.swo
 
+# 愿望板后端存储（避免提交用户数据）
+/data/
+
 # OS
 .DS_Store
 Thumbs.db
