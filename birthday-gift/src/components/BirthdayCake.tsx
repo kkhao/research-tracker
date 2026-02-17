@@ -16,13 +16,24 @@ function getCountdown(target: Date) {
   return { canBlow: false, days, hours, minutes };
 }
 
-const MONEY_PARTICLES = Array.from({ length: 15 }, (_, i) => ({
+const MONEY_PARTICLES = Array.from({ length: 8 }, (_, i) => ({
   id: i,
-  icon: i % 3 === 0 ? "💸" : "🪙",
+  icon: "🪙",
   left: 8 + ((i * 7) % 84),
   delay: (i % 6) * 0.12,
   duration: 2.2 + (i % 5) * 0.25,
   drift: (i % 2 === 0 ? 1 : -1) * (6 + (i % 4) * 3),
+}));
+
+/** 化妆品 + 首饰：口红、护肤品、戒指、项链、宝石 */
+const GIFT_ICONS = ["💄", "🧴", "💍", "📿", "💎"];
+const GIFT_PARTICLES = Array.from({ length: 32 }, (_, i) => ({
+  id: `gift-${i}`,
+  icon: GIFT_ICONS[i % GIFT_ICONS.length],
+  left: 8 + (i / 31) * 84,
+  delay: 0.3 + (i % 16) * 0.1,
+  duration: 2.2 + (i % 10) * 0.22,
+  drift: (i % 2 === 0 ? 1 : -1) * (10 + (i % 6) * 4),
 }));
 
 type Props = {
@@ -251,6 +262,21 @@ export default function BirthdayCake({ onBlowStart }: Props) {
                         animationDelay: `${p.delay}s`,
                         animationDuration: `${p.duration}s`,
                         ["--money-drift" as string]: `${p.drift}px`,
+                      }}
+                      aria-hidden
+                    >
+                      {p.icon}
+                    </span>
+                  ))}
+                  {GIFT_PARTICLES.map((p) => (
+                    <span
+                      key={p.id}
+                      className="gift-particle"
+                      style={{
+                        left: `${p.left}%`,
+                        animationDelay: `${p.delay}s`,
+                        animationDuration: `${p.duration}s`,
+                        ["--gift-drift" as string]: `${p.drift}px`,
                       }}
                       aria-hidden
                     >

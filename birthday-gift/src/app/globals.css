@@ -608,6 +608,31 @@ body {
   filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
 }
 
+@keyframes gift-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) rotate(0deg) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--gift-drift, 0px)), -120px) rotate(-12deg) scale(1.1);
+  }
+}
+
+.gift-particle {
+  position: absolute;
+  bottom: 26px;
+  font-size: 1.35rem;
+  animation-name: gift-rise;
+  animation-timing-function: cubic-bezier(0.2, 0.6, 0.2, 1);
+  animation-fill-mode: both;
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 0 8px rgba(244, 114, 182, 0.5));
+}
+
 /* 流星雨 */
 @keyframes shooting-star {
   0% {
